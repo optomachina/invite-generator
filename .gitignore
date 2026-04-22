@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Claude Code local settings (per-machine, not shared)
+.claude/settings.local.json
+
+# gstack session state (local logs, browse audit)
+.gstack/
