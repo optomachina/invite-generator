@@ -102,3 +102,97 @@ If any gate misses by >50%, stop and retro before continuing.
 **Context:** Run `which rtk` and `rtk gain`. If "command not found", install and set up the Claude Code hook per your RTK.md. Delete this TODO when verified.
 
 **Depends on:** Nothing.
+
+---
+
+## 7. Apple Wallet pass integration (v1.1)
+
+**What:** Static .pkpass signing pipeline on the Fly.io worker, `POST /api/v1/invites/{id}/wallet-pass` endpoint, pass template with invite illustration + event metadata, Apple PassKit signing cert. Add-to-Wallet CTA on share page. Rely on Apple's built-in time-based relevance for lock-screen surfacing near event date. Defer push-update web service (APNs) until retention data shows guests actually use Wallet pass.
+
+**Why:** Mrs. W identified Wallet pass as a high-value differentiator on the share page during 2026-04-22 review — "American-Airlines-style timely reminders." Deferred from v1 by /plan-eng-review on 2026-04-22 to protect solo builder timeline. Static pass with native time-relevance delivers ~80% of the vision for ~20% of the build cost.
+
+**Pros:** Unique in the invite space (nobody else does this well). Second retention moment per event. Low incremental infra — cert + template + sign + serve. Works on share page visits from any guest phone.
+
+**Cons:** ~1 day of solo build for static pass; ~3-4 days for full push-update service. PassKit cert management becomes a permanent operational task (annual renewal). Adds a vendor dependency on Apple's notarization chain.
+
+**Context:** Design doc line 485 notes the vision is "American-Airlines-style timely reminders with a cute image pulled from the invitation." Static pass path: node-passkit or similar lib on the worker. Cert is one-time setup in Apple Developer portal. Template JSON references the invite image URL. Worth building the push-update service later only if v1.1+ usage data shows the feature is sticky.
+
+**Depends on:** v1 paid-conversion signal hitting week-3 kill criteria + Apple Developer Program setup (already budgeted in design doc L258).
+
+---
+
+## 8. Voice-input feature flag + cost kill-switch (pre-ship)
+
+**What:** From day one, wrap the `/api/v1/transcribe` endpoint behind a PostHog feature flag that can be toggled without a deploy. Add a cost kill-switch: if transcribe spend exceeds $50 in a rolling 24h window (tracked via a Postgres `transcribe_usage` table with hourly aggregation), auto-disable voice for all sessions and fire a Sentry alert. When disabled, the intake UI silently reverts to text-only.
+
+**Why:** Codex outside voice flagged during /plan-eng-review 2026-04-22 that voice is a new abuse surface and the initial defense layer (Turnstile + 60s cap + per-session rate limit) lacks a cost-based circuit breaker. For a pre-validation product with no revenue covering abuse, a silent $500 OpenAI bill from a targeted abuse campaign is a much larger pain than a 2-line check in the request handler.
+
+**Pros:** Trivial to add while building the endpoint. Saves you in the long-tail abuse scenario where Turnstile is bypassed. Lets you kill voice instantly if anything goes wrong without a deploy. Cost kill-switches are standard operational hygiene.
+
+**Cons:** Adds one env var, one PostHog flag, one Postgres table, one Sentry alert rule. Negligible cost. Slight latency tax on every transcribe request (<5ms for the flag check + the usage counter increment).
+
+**Context:** PostHog is already in the stack (design doc L122). Feature flag reads happen at Edge before the transcribe handler runs. Usage counter is INSERT-only with a daily cleanup job. Sentry alert fires at $40 threshold (warning) and $50 (auto-disable). Manual re-enable via PostHog dashboard after investigation.
+
+**Depends on:** Voice-input feature being built. This TODO gates shipping voice.
+
+---
+
+## 9. Thinking-notes template library expansion (week 2-3)
+
+**What:** Start v1 with 40 canned+interpolated note templates in `packages/thinking-notes/templates.ts`. Expand to 80 templates by week 3 based on Mrs. W's repetition feedback from beta usage. Each template is `{ id: string, text_template: string, context_requires: Array<"name" | "event" | null> }` so the renderer picks only templates where the required context fields are filled.
+
+**Why:** Codex outside voice warned during /plan-eng-review 2026-04-22 that the beta cohort (Mrs. W, same user running the flow 10+ times) will notice repetition fast. 40 notes at ~4-6s rotation over a 60s generating window = ~12 notes per session = repetition begins by session 4. 80 templates extends the non-repetition ceiling to ~7 sessions, covering the critical week-1 to week-3 beta window without a vendor swap to LLM-generated notes.
+
+**Pros:** Better beta experience without adding an LLM dependency to the anxiety-peak wait screen. Defers the decision about LLM-generated notes until post-validation data supports it. Copywriting is fast with Claude (~4 hours for 40 more).
+
+**Cons:** ~4 hours of copywriting. Slight maintenance burden (one file to curate).
+
+**Context:** Templates live in `packages/thinking-notes/templates.ts`. Renderer is pure function: `render(template, intake_context) => string`. Server interpolates once at generation start, sends all notes in a single `generation.state` blob the client can refetch on reconnect (per Codex's SSE replay concern). Expansion is purely additive — adding 40 more templates doesn't change the renderer or the API contract.
+
+**Depends on:** v1 shipping with the initial 40. Week-3 retro checks if Mrs. W flagged repetition.
+
+---
+
+## 10. LLM-driven context-extraction intake (v1.5+)
+
+**What:** A conversational intake layer that asks follow-up questions after the initial description to deepen context: "Who's this for?" "What's the vibe?" "Where is it?" "Any design direction — preferred colors, themes, references you've seen you loved?" gpt-4o-mini drives 2-4 chained questions based on what's still ambiguous in the parse. Output feeds into the generation prompt as richer context than a single-shot description provides. Ship as an optional "tell me more" affordance, not a gate on the happy path.
+
+**Why:** The locked v1 intake is a single-shot free-text + chip + voice → parser → generate flow. That's enough for "Lily's 5th birthday, June 15, at the park" but leaves a lot of taste-signal on the table. The highest-variance variable in generation quality is the prompt; better prompts come from better context; better context comes from knowing what to ask about. An LLM-driven question loop is the cheapest way to extract that without a form.
+
+**Pros:** Gets bespoke-designer quality closer to reality — the thing an Etsy designer does on day 2 is ask clarifying questions. Creates a differentiator vs. single-shot competitors. Re-uses the parser infrastructure already locked. Cost is ~$0.002/session at gpt-4o-mini pricing.
+
+**Cons:** Every extra question is a conversion funnel leak. Must be strictly optional and skippable. Adds prompt-engineering surface area (the system prompt for "ask the right next question" is not trivial). Risk of the LLM asking dumb or generic questions that annoy the target user.
+
+**Context:** v1 ships intake without this. Gather week-3 data first — what do paying users consistently NOT get right on first generation? What do refund requests cite? That signal tells you whether the extraction loop would have caught it. Natural follow-on to the existing `POST /api/v1/events/parse` endpoint: add `POST /api/v1/events/refine` that takes the current parsed state and returns `{ next_question?, confidence, ready_to_generate }`. Loop until `ready_to_generate=true` or user hits "I'm done, generate."
+
+**Depends on:** v1 paid-conversion data. Don't build before week 3.
+
+---
+
+## 11. Social-graph enrichment for invite context (v2+, ethics gate)
+
+**What:** Opt-in feature where the host provides the honoree's Instagram handle (and optionally guest list emails/phone → matched to public profiles). System analyzes publicly-available posts to extract taste signals: favorite colors in their feed, aesthetic vocabulary (cottagecore, minimalist, Y2K), interests (horses, Taylor Swift, specific franchises), and generates invites biased toward those signals. For guest lists: aggregate taste signals across guests to increase the chance the invite resonates with the group (not just the honoree).
+
+**Why:** Blaine flagged as a moonshot idea 2026-04-22. The pitch: "what if we could analyze the guest list and create an invite that's more likely to have people attend on account of publicly available information?" It IS a genuinely novel differentiator in the invite space. No competitor does this. Closest analog is how wedding designers look at couples' Instagrams before proposing a direction.
+
+**Pros:** Real differentiator. Would make the product feel weirdly prescient in the good way ("how did it KNOW Lily loves horses?"). Could drive significant word-of-mouth virality.
+
+**Cons (substantial, take seriously):**
+- **GDPR/CCPA exposure.** Scraping public profiles for taste signal is legally gray. EU residents have "right to be forgotten" that doesn't care about public/private distinction. "I gave you my friend's handle, you profiled them without their consent" is a real complaint vector.
+- **Kids on guest lists.** Target user is moms planning kids' birthdays. Guest lists have kids in them. COPPA scope for under-13 is severe; profiling a minor off Instagram is a compliance trainwreck.
+- **Creep factor.** The line between "thoughtful personalization" and "you read my Instagram without asking" is in a different place for every user. Some will love it; some will tell everyone they know you're creepy. That asymmetry is dangerous for a consumer product.
+- **Signal quality is dubious.** Public Instagram posts are curated performances, not actual taste. A designer who spent 20 min on someone's IG still gets it wrong half the time. An LLM scoring colors and keywords will get it wrong more.
+- **Engineering surface is huge.** Instagram scraping is an arms race. Their API is gated; third-party scraping services violate ToS; even "read a public profile" is adversarial. This feature alone is a multi-month build.
+- **Instagram ToS risk.** Meta's developer terms prohibit scraping for profile analysis. Using their Graph API for this requires an approved use case, which "infer taste preferences for invite design" is not.
+
+**Context:** If you pursue this at all:
+1. Start with explicit opt-in for the **honoree only** ("paste their Instagram if they said it's OK — we'll use it to personalize"). Never guest-list-wide as v1 of this feature.
+2. Never profile anyone under 18. Age-verification gate.
+3. Use Meta's official Instagram Basic Display API with the honoree's own OAuth approval — scrapers are a liability.
+4. Be deeply transparent in UI about what was used and why. "We noticed her feed has a lot of ocean colors, so we leaned blue." Not hidden.
+5. Alternative framing that sidesteps most issues: ask the host to paste 2-3 Instagram post URLs that capture the honoree's aesthetic. Host copies the URLs deliberately; no automated crawl. Same signal, no compliance surface.
+
+**Pros of the alternative framing:** ~100x lower legal risk. Lower engineering cost (no scraping infra). Same user-visible magic.
+
+**Depends on:** v1 validation + legal review + explicit product decision on ethics posture. This TODO should be revisited after consulting with a lawyer about the scraping-vs-OAuth-vs-URL-paste spectrum.
+
