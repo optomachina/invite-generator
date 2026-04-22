@@ -639,6 +639,7 @@
     <div class="flow-end-actions">
       <button class="btn-primary" id="copy-btn">Copy feedback</button>
       <button class="btn-secondary" id="text-btn">Text it to Blaine</button>
+      <button class="btn-secondary" id="share-link-btn" title="Copy a link that reproduces this exact flow for anyone who opens it">Copy share link</button>
       <button class="btn-secondary" id="back-btn">Back to the gallery</button>
     </div>
     <div id="chain-summary" class="chain-summary" style="display:none"></div>
@@ -658,15 +659,60 @@
   ];
   const STORAGE_KEY = 'invite-review-v1';
 
+  // --- Shareable URL: #p=<variant>,<variant>,... (SCREENS order) ---
+  function readUrlPicks(){
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash) return null;
+    const params = new URLSearchParams(hash);
+    const p = params.get('p');
+    if (!p) return null;
+    const parts = p.split(',');
+    const cardsByVariant = {};
+    document.querySelectorAll('.card').forEach(c => { cardsByVariant[c.dataset.variant] = c; });
+    const picks = {};
+    SCREENS.forEach((s, i) => {
+      const v = parts[i];
+      const card = v && cardsByVariant[v];
+      if (card && card.closest('.screen').dataset.screen === s.id){
+        picks[s.id] = v;
+      }
+    });
+    return Object.keys(picks).length ? picks : null;
+  }
+  function writeUrlPicks(){
+    const parts = SCREENS.map(s => state.picks[s.id] || '');
+    const allPicked = parts.every(Boolean);
+    if (!allPicked){
+      if (window.location.hash) history.replaceState(null, '', window.location.pathname + window.location.search);
+      return;
+    }
+    const hash = '#p=' + parts.join(',');
+    if (window.location.hash !== hash){
+      history.replaceState(null, '', window.location.pathname + window.location.search + hash);
+    }
+  }
+  function buildShareUrl(){
+    const parts = SCREENS.map(s => state.picks[s.id] || '');
+    if (!parts.every(Boolean)) return window.location.href.split('#')[0];
+    return window.location.origin + window.location.pathname + '#p=' + parts.join(',');
+  }
+
+  const urlPicks = readUrlPicks();
   const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-  const isFirstVisit = !stored.picks;
+  const isFirstVisit = !stored.picks && !urlPicks;
   const state = stored;
   state.picks = state.picks || {};
   state.notes = state.notes || {};
   state.finalNote = state.finalNote || '';
   state.expanded = state.expanded || {};
 
-  // On first visit, seed picks with my recommendations (variants marked .is-recommended)
+  // URL picks take precedence — someone shared a link, honor it.
+  if (urlPicks){
+    state.picks = urlPicks;
+    state.expanded = {}; // collapse all since everything is picked
+  }
+
+  // On first visit (no URL, no saved state), seed picks with my recommendations.
   if (isFirstVisit){
     document.querySelectorAll('.card.is-recommended').forEach(card => {
       const screenId = card.closest('.screen').dataset.screen;
@@ -674,7 +720,10 @@
     });
   }
 
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    writeUrlPicks();
+  }
 
   // --- Card selection ---
   document.querySelectorAll('.card').forEach(card => {
@@ -916,6 +965,19 @@
       box.style.display = 'block';
       box.textContent = text;
       showToast('Copy failed — select the text below');
+    }
+  });
+
+  document.getElementById('share-link-btn').addEventListener('click', async () => {
+    const url = buildShareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Share link copied ✓');
+    } catch(e){
+      const box = document.getElementById('chain-summary');
+      box.style.display = 'block';
+      box.textContent = url;
+      showToast('Copy failed — link is below');
     }
   });
 
