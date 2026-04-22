@@ -196,3 +196,51 @@ If any gate misses by >50%, stop and retro before continuing.
 
 **Depends on:** v1 validation + legal review + explicit product decision on ethics posture. This TODO should be revisited after consulting with a lawyer about the scraping-vs-OAuth-vs-URL-paste spectrum.
 
+---
+
+## 12. Tinder-style L/R swipe gestures (v1 — non-optional per Mrs. W)
+
+**What:** Replace tap-to-choose on the swipe screen with full Tinder-style card-stack physics: drag with tilt+opacity peek, snap-back on weak swipes, decisive L/R commits the keep/discard, undo button, 4-dot progress dots, circular X/heart buttons under the stack as a non-swiper fallback. Both web and iOS.
+
+**Why:** Mrs. W explicit ask in 2026-04-22 design review: tap-to-choose breaks the mental model the "swipe" word promises. The swipe metaphor is the core mechanic of this product — getting it wrong is shipping a different product than the one we pitched. She called this non-optional, not a preference.
+
+**Pros:** Matches the mental model the product name implies. Tactile feedback is what makes the "fun" of generation land. Non-swiper fallback (X/heart buttons) keeps it accessible.
+
+**Cons:** ~1 day of UI work on web (framer-motion or react-tinder-card). iOS gets it close to free with native gesture system. Adds gesture-tuning surface (thresholds, easings) that needs to feel right or it feels broken.
+
+**Context:** Currently the design doc lists the swipe screen with "tap-to-choose" semantics. This TODO upgrades it to gesture-first with tap fallback. Spec: drag threshold ~80px or velocity >0.5; tilt up to 15° at threshold; opacity to 0.6 at threshold; snap-back below threshold with spring; success animation = card flies off screen + green keep stamp on right, red X on left. Non-swiper buttons trigger the same animations.
+
+**Depends on:** Swipe screen being built. This is v1, not deferred.
+
+---
+
+## 13. Intake: tap-and-hold mic + visible event-type chips (v1)
+
+**What:** Unify the intake into one input that accepts both typing and voice. Long-press on the textbox or its embedded mic icon dictates into the same field (no separate voice/text mode toggle). Show event-type chips as empty-state helpers (birthday, baby shower, graduation, gender reveal, milestone, wedding, other) — tapping a chip seeds the textbox with a starter phrase. "Or use fields" stays as an escape hatch but the hybrid is the default.
+
+**Why:** Two findings from 2026-04-22 design review with Mrs. W. (1) The "second mic icon in the textbox" reads as redundant — make it one unified affordance. (2) Empty input feels unguided; visible chips give the user permission to "focus on the right answer." Even users who could verbally answer benefit from seeing the answer space first.
+
+**Pros:** Removes a decision (voice vs text) the user shouldn't have to make. Chips lower the activation energy on a blank textbox — the #1 conversion killer on intake screens. Both feedback items resolved with one screen iteration.
+
+**Cons:** ~half a day of UI work. Tap-and-hold gesture needs visual feedback (recording indicator, waveform, release-to-stop) — easy to ship a janky version. Chips list needs curation; too many = clutter, too few = the user's event type is missing.
+
+**Context:** Voice transcription path already TODO'd as #8 (PostHog flag + cost kill-switch). This TODO is about the UI affordance, not the backend. Recommended: 7 chips visible by default (the 6 most common event types + "Other"). Long-press on textbox starts recording with visible waveform + timer; release stops + transcribes + appends to existing text (does not replace).
+
+**Depends on:** Intake screen being built. This is v1.
+
+---
+
+## 14. Generating screen: status copy dedup + thinking-notes voice (v1)
+
+**What:** Two fixes on the generating screen. (a) Show one status line max — "Sketching… Sketching… Sketching 4 concepts for Lily's first birthday" reads like a stuttering bug. Pick one canonical phrasing and stick with it for the session. (b) Adopt Claude's flip-book thinking-notes voice — small clever notes like "Adding a dash of cake…" / "Picking colors Lily would love" — instead of sterile progress copy. Add jokes and contextual references (honoree name, event type) so it feels like a designer is in the room, not a load bar.
+
+**Why:** Mrs. W's 2026-04-22 reaction to the generating mockups. She picked the "calm" variant overall but specifically called out the duplicative copy as a defect and the playful thinking-notes as the right tone. The 60-second wait is the highest-anxiety moment in the funnel; voice on this screen does emotional work the spinner can't.
+
+**Pros:** Cheap fix — copy + a single status line. Big emotional payoff at the most fragile moment in the funnel. Aligns with "feels like a designer is working on it" positioning. Reuses the thinking-notes template library already TODO'd as #9.
+
+**Cons:** None substantial. Risk is over-doing the cleverness and tipping from "warm" to "annoying" — keep notes short and specific to the user's event.
+
+**Context:** Pairs with TODO #9 (thinking-notes template library expansion). #14 is the screen-level UX fix; #9 is the content library that powers it. Single status line should reference the user's actual event ("Sketching 4 invites for Lily's 5th birthday") not generic ("Generating concepts"). Notes rotate every 4-6s during the 60s window.
+
+**Depends on:** Generating screen being built. v1.
+
