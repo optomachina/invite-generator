@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Invite — design review, April 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#f6f1e7;
+    --cream-2:#eee6d4;
+    --ink:#1d1a15;
+    --ink-2:#3a342a;
+    --muted:#7a7163;
+    --accent:#b85c2f;
+    --accent-soft:#d98b5f;
+    --line:#d9cfb8;
+    --pick:#2a5f58;
+    --pick-soft:#3a7a70;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;line-height:1.55}
+  body{
+    background-image: radial-gradient(circle at 1px 1px, rgba(29,26,21,.04) 1px, transparent 0);
+    background-size: 4px 4px;
+    padding-bottom:120px; /* room for sticky bar */
+  }
+  h1,h2,h3,h4{font-family:Fraunces,serif;font-weight:600;letter-spacing:-0.01em;color:var(--ink);margin:0}
+  h1{font-size:clamp(40px,7vw,88px);line-height:1.02;letter-spacing:-0.025em}
+  h1 em{font-style:italic;color:var(--accent)}
+  h2{font-size:clamp(28px,4vw,44px);line-height:1.1;margin-bottom:.25em}
+  h3{font-size:22px;font-weight:600}
+  h4{font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+  p{margin:0 0 1em;max-width:62ch}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+  a:hover{color:var(--ink)}
+  button{font-family:inherit;cursor:pointer}
+
+  .wrap{max-width:1240px;margin:0 auto;padding:48px 28px 80px}
+  header.page{padding:24px 0 72px;border-bottom:1px solid var(--line);margin-bottom:64px}
+  .eyebrow{font-family:Inter,sans-serif;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:24px}
+  .eyebrow .dot{display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;margin:0 .6em;vertical-align:middle}
+  .lede{font-family:Fraunces,serif;font-size:clamp(18px,2vw,24px);font-weight:400;color:var(--ink-2);max-width:46ch;margin-top:32px;font-style:italic}
+  .howto{margin-top:32px;padding:20px 24px;background:#fff;border:1px solid var(--line);border-radius:3px;max-width:52ch;font-size:15px}
+  .howto b{font-family:Fraunces,serif;font-weight:600}
+
+  section.screen{margin:96px 0;scroll-margin-top:24px}
+  section.screen:first-of-type{margin-top:0}
+  .screen-head{display:flex;justify-content:space-between;align-items:baseline;gap:32px;flex-wrap:wrap;margin-bottom:8px}
+  .screen-num{font-family:Fraunces,serif;font-style:italic;font-weight:400;font-size:20px;color:var(--accent);margin-right:16px}
+  .screen-title{display:flex;align-items:baseline}
+  .screen-status{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:Inter}
+  .screen-status.picked{color:var(--pick)}
+  .screen-status.picked::before{content:"✓ ";font-weight:600}
+  .screen-desc{max-width:52ch;color:var(--ink-2);margin:16px 0 8px}
+  .screen-notes{background:rgba(184,92,47,.06);border-left:2px solid var(--accent);padding:20px 24px;margin:32px 0;max-width:72ch;font-size:15px}
+  .screen-notes b{font-family:Fraunces,serif;font-weight:600}
+  .screen-notes.hidden{display:none}
+  .notes-toggle{background:transparent;border:0;color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:0;margin-top:8px;border-bottom:1px dotted var(--muted)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:28px;margin-top:24px}
+  .card{position:relative;background:#fff;border:1px solid var(--line);border-radius:3px;overflow:hidden;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+  .card:hover{transform:translateY(-2px);box-shadow:0 18px 40px -20px rgba(29,26,21,.25)}
+  .card .img-wrap{aspect-ratio:9/16;overflow:hidden;background:var(--cream-2);display:flex;align-items:center;justify-content:center;position:relative}
+  .card img{width:100%;height:100%;object-fit:contain;display:block}
+  .card .caption{padding:14px 16px 16px;border-top:1px solid var(--line);background:#fdfbf4;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .card .caption .label{font-family:Fraunces,serif;font-size:16px;font-weight:600;line-height:1.2}
+  .card .caption .model{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+  .card .actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+
+  .btn-pick{
+    border:1px solid var(--line);background:#fff;color:var(--ink-2);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    padding:8px 12px;border-radius:2px;transition:all .15s ease;font-weight:500;
+    white-space:nowrap;
+  }
+  .btn-pick:hover{border-color:var(--pick);color:var(--pick)}
+  .btn-zoom{
+    border:1px solid var(--line);background:#fff;color:var(--muted);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    padding:8px 12px;border-radius:2px;font-weight:500;
+  }
+  .btn-zoom:hover{color:var(--ink);border-color:var(--muted)}
+
+  .card.is-recommended{border:2px solid var(--pick)}
+  .card.is-recommended .ribbon{
+    position:absolute;top:14px;left:-2px;
+    background:var(--pick);color:#fff;
+    font-family:Fraunces,serif;font-size:11px;font-weight:600;
+    letter-spacing:.12em;text-transform:uppercase;
+    padding:6px 14px 6px 12px;z-index:2;
+  }
+  .card.is-selected{border:3px solid var(--pick);box-shadow:0 12px 40px -18px rgba(42,95,88,.5)}
+  .card.is-selected .check{
+    position:absolute;top:12px;right:12px;
+    width:32px;height:32px;border-radius:50%;
+    background:var(--pick);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:18px;z-index:3;box-shadow:0 4px 12px rgba(42,95,88,.4);
+  }
+  .card.is-selected .btn-pick{background:var(--pick);color:#fff;border-color:var(--pick)}
+  .card.is-selected .btn-pick::after{content:" — picked"}
+
+  /* per-screen note field */
+  .note-field{margin-top:24px;max-width:62ch}
+  .note-field label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .note-field textarea{
+    width:100%;min-height:60px;padding:12px 16px;
+    background:#fff;border:1px solid var(--line);border-radius:2px;
+    font-family:inherit;font-size:15px;color:var(--ink);resize:vertical;
+  }
+  .note-field textarea:focus{outline:none;border-color:var(--accent)}
+
+  /* lightbox */
+  .lightbox{
+    position:fixed;inset:0;background:rgba(29,26,21,.92);
+    display:none;align-items:center;justify-content:center;
+    z-index:200;padding:24px;cursor:zoom-out;
+  }
+  .lightbox.open{display:flex}
+  .lightbox img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 40px 120px rgba(0,0,0,.6)}
+  .lightbox .caption{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    color:#f6f1e7;font-family:Fraunces,serif;font-style:italic;font-size:14px;
+    background:rgba(0,0,0,.4);padding:6px 14px;border-radius:2px;
+  }
+
+  /* sticky progress bar */
+  .dock{
+    position:fixed;bottom:0;left:0;right:0;
+    background:rgba(29,26,21,.96);color:#f6f1e7;
+    padding:14px 28px;z-index:50;
+    backdrop-filter:blur(10px);
+    border-top:1px solid rgba(255,255,255,.08);
+    transition:transform .3s ease;
+  }
+  .dock.hidden{transform:translateY(100%)}
+  .dock-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:20px}
+  .dock-steps{display:flex;gap:10px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .dock-steps::-webkit-scrollbar{display:none}
+  .dock-step{
+    flex:0 0 auto;min-width:72px;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:rgba(246,241,231,.5);
+  }
+  .dock-step .thumb{
+    width:38px;height:54px;border-radius:3px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.1);
+    background-size:cover;background-position:center;
+    transition:all .2s ease;
+  }
+  .dock-step.filled{color:#f6f1e7}
+  .dock-step.filled .thumb{border-color:var(--pick);background-color:transparent}
+  .dock-arrow{color:rgba(246,241,231,.3);font-size:14px}
+  .dock-action{
+    background:var(--pick);color:#fff;
+    padding:12px 22px;border:0;border-radius:2px;
+    font-family:Fraunces,serif;font-size:15px;font-weight:600;
+    letter-spacing:.02em;white-space:nowrap;
+    transition:background .2s ease;
+  }
+  .dock-action:hover{background:var(--pick-soft)}
+  .dock-action:disabled{background:rgba(255,255,255,.08);color:rgba(246,241,231,.3);cursor:not-allowed}
+  .dock-progress{font-size:12px;color:rgba(246,241,231,.6);letter-spacing:.1em;text-transform:uppercase}
+
+  /* flow preview modal */
+  .flow{
+    position:fixed;inset:0;background:var(--cream);
+    display:none;z-index:300;
+    background-image: radial-gradient(circle at 1px 1px, rgba(29,26,21,.05) 1px, transparent 0);
+    background-size: 4px 4px;
+    overflow-y:auto;
+  }
+  .flow.open{display:block}
+  .flow-head{padding:20px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);background:rgba(246,241,231,.94);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  .flow-title{font-family:Fraunces,serif;font-size:16px}
+  .flow-title em{font-style:italic;color:var(--accent)}
+  .flow-close{background:transparent;border:0;color:var(--ink-2);font-size:14px;padding:8px 12px}
+  .flow-stage{min-height:calc(100vh - 80px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;position:relative}
+  .phone{
+    width:min(340px,86vw);aspect-ratio:9/19.5;
+    background:#1d1a15;border-radius:48px;padding:12px;
+    box-shadow:0 40px 80px -30px rgba(29,26,21,.5), 0 0 0 1px rgba(29,26,21,.1);
+    position:relative;
+  }
+  .phone::before{
+    content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);
+    width:110px;height:26px;background:#1d1a15;border-radius:20px;z-index:2;
+  }
+  .phone .screen-inner{
+    width:100%;height:100%;border-radius:38px;overflow:hidden;
+    background:var(--cream-2);position:relative;
+  }
+  .phone .screen-inner img{width:100%;height:100%;object-fit:cover;display:block}
+  .flow-meta{margin-top:24px;text-align:center;max-width:420px}
+  .flow-step-label{font-family:Fraunces,serif;font-style:italic;color:var(--accent);font-size:14px;letter-spacing:.04em}
+  .flow-step-title{font-family:Fraunces,serif;font-size:24px;font-weight:600;margin-top:4px}
+  .flow-step-note{color:var(--muted);font-size:14px;margin-top:8px;font-style:italic}
+  .flow-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;gap:16px;max-width:520px;margin:0 auto;width:100%}
+  .flow-btn{background:#fff;border:1px solid var(--line);padding:10px 18px;border-radius:2px;font-size:13px;color:var(--ink-2);letter-spacing:.08em;text-transform:uppercase}
+  .flow-btn:hover{border-color:var(--ink-2)}
+  .flow-btn:disabled{opacity:.3;cursor:not-allowed}
+  .flow-dots{display:flex;gap:6px}
+  .flow-dots span{width:6px;height:6px;border-radius:50%;background:rgba(29,26,21,.2);transition:all .2s ease}
+  .flow-dots span.active{background:var(--accent);width:18px;border-radius:3px}
+
+  .flow-end{padding:48px 24px 120px;max-width:620px;margin:0 auto}
+  .flow-end h2{font-size:36px;margin-bottom:16px}
+  .flow-end h2 em{font-style:italic;color:var(--accent)}
+  .flow-end textarea{
+    width:100%;min-height:120px;padding:16px;
+    background:#fff;border:1px solid var(--line);border-radius:2px;
+    font-family:inherit;font-size:16px;color:var(--ink);resize:vertical;margin-top:12px;
+  }
+  .flow-end textarea:focus{outline:none;border-color:var(--accent)}
+  .flow-end-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+  .btn-primary{background:var(--pick);color:#fff;border:0;padding:14px 22px;border-radius:2px;font-family:Fraunces,serif;font-size:15px;font-weight:600}
+  .btn-primary:hover{background:var(--pick-soft)}
+  .btn-secondary{background:transparent;color:var(--ink-2);border:1px solid var(--line);padding:14px 22px;border-radius:2px;font-size:14px}
+  .btn-secondary:hover{border-color:var(--ink-2)}
+  .chain-summary{background:#fff;border:1px solid var(--line);padding:20px 24px;margin-top:24px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.7;color:var(--ink-2);white-space:pre-wrap;word-wrap:break-word}
+
+  .toast{
+    position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-80px);
+    background:var(--pick);color:#fff;padding:12px 20px;border-radius:2px;
+    font-family:Fraunces,serif;font-size:14px;z-index:400;transition:transform .3s ease;
+    box-shadow:0 12px 30px rgba(42,95,88,.3);
+  }
+  .toast.show{transform:translateX(-50%) translateY(0)}
+
+  footer.page{margin-top:120px;padding-top:48px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  footer.page p{max-width:none}
+
+  @media (max-width:640px){
+    .wrap{padding:32px 20px 40px}
+    section.screen{margin:72px 0}
+    .grid{grid-template-columns:1fr;gap:20px}
+    .dock{padding:10px 16px}
+    .dock-inner{gap:10px}
+    .dock-step{min-width:56px}
+    .dock-step .thumb{width:30px;height:44px}
+    .dock-step span.label{display:none}
+    .dock-action{padding:10px 14px;font-size:13px}
+    .dock-progress{display:none}
+    .flow-head{padding:14px 18px}
+    .flow-meta{margin-top:16px}
+    .flow-step-title{font-size:20px}
+    body{padding-bottom:90px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="page">
+  <div class="eyebrow">Design review <span class="dot"></span> April 22, 2026 <span class="dot"></span> For Mrs. W</div>
+  <h1>Which of these <em>feels</em> like the invite you&rsquo;d actually pay for?</h1>
+  <p class="lede">Thirty-three mockups, five screens, two AI designers working in parallel. Pick one per screen. When you&rsquo;ve picked all five, I&rsquo;ll stitch them into a flow so you can see your app.</p>
+  <div class="howto">
+    <b>How this works:</b> scroll down, tap <em>Pick this</em> on your favorite for each of the 5 screens. The bar at the bottom tracks your progress. Once all five are chosen, hit <em>See the flow</em> to walk through your app, then leave me a note. Teal ribbons are my own picks — feel free to overrule.
+  </div>
+</header>
+
+<!-- SCREEN 1: COMPARE + PAYWALL -->
+<section class="screen" id="s1" data-screen="compare-paywall" data-title="Compare &amp; pay" data-num="01">
+  <div class="screen-head">
+    <div class="screen-title"><span class="screen-num">01</span><h2>Compare &amp; pay</h2></div>
+    <div class="screen-status" data-status>6 variants &middot; pick one</div>
+  </div>
+  <p class="screen-desc">The moment you pick the winner and pay $7. This is the revenue moment &mdash; it needs to feel decisive and premium, not pushy.</p>
+  <button class="notes-toggle" data-notes-toggle>Designer notes ↓</button>
+  <div class="screen-notes hidden">
+    <b>Designer take:</b> Codex keeps making the invite cards huge and drops the iPhone frame; Claude keeps shrinking the invite inside a device mockup. For a product where the invite IS the thing, Codex&rsquo;s framing wins. Claude&rsquo;s copy (&ldquo;Which one feels like Lily?&rdquo;) is better than anything Codex wrote.
+  </div>
+  <div class="grid">
+    <figure class="card is-recommended" data-variant="paywall-C-codex" data-label="Compare &amp; pay — C · mixed typography (GPT-4o)" data-img="mockups/01-compare-paywall/variant-C-mixed-codex.png">
+      <span class="ribbon">My pick</span><span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/01-compare-paywall/variant-C-mixed-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; mixed type</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="paywall-A-claude" data-label="Compare &amp; pay — A · serif-led (Claude)" data-img="mockups/01-compare-paywall/variant-A-serif-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/01-compare-paywall/variant-A-serif-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; serif-led</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="paywall-A-codex" data-label="Compare &amp; pay — A · serif-led (GPT-4o)" data-img="mockups/01-compare-paywall/variant-A-serif-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/01-compare-paywall/variant-A-serif-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; serif-led</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="paywall-B-claude" data-label="Compare &amp; pay — B · warm sans (Claude)" data-img="mockups/01-compare-paywall/variant-B-sans-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/01-compare-paywall/variant-B-sans-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; warm sans</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="paywall-B-codex" data-label="Compare &amp; pay — B · warm sans (GPT-4o)" data-img="mockups/01-compare-paywall/variant-B-sans-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/01-compare-paywall/variant-B-sans-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; warm sans</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="paywall-C-claude" data-label="Compare &amp; pay — C · mixed type (Claude)" data-img="mockups/01-compare-paywall/variant-C-mixed-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/01-compare-paywall/variant-C-mixed-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; mixed type</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="note-field"><label for="note-compare-paywall">Optional note about this screen</label><textarea id="note-compare-paywall" data-note placeholder="What works, what doesn't, anything you'd tweak…"></textarea></div>
+</section>
+
+<!-- SCREEN 2: SWIPE -->
+<section class="screen" id="s2" data-screen="swipe" data-title="Swipe the four" data-num="02">
+  <div class="screen-head">
+    <div class="screen-title"><span class="screen-num">02</span><h2>Swipe the four</h2></div>
+    <div class="screen-status" data-status>6 variants &middot; pick one</div>
+  </div>
+  <p class="screen-desc">The core mechanic &mdash; one card at a time, keep-or-skip, Tinder-style. Should feel like curating, not evaluating.</p>
+  <button class="notes-toggle" data-notes-toggle>Designer notes ↓</button>
+  <div class="screen-notes hidden">
+    <b>Designer take:</b> The photographic Codex variant (EMMA on the beach) is the single most Etsy-competitive frame in the audit. It answers &ldquo;why not Canva?&rdquo; in one glance. Claude&rsquo;s photo attempt is just a flat orange rectangle &mdash; it missed the brief.
+  </div>
+  <div class="grid">
+    <figure class="card is-recommended" data-variant="swipe-B-codex" data-label="Swipe — B · photographic (GPT-4o)" data-img="mockups/02-swipe/variant-B-photo-codex.png">
+      <span class="ribbon">My pick</span><span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/02-swipe/variant-B-photo-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; photographic</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="swipe-A-codex" data-label="Swipe — A · watercolor pastel (GPT-4o)" data-img="mockups/02-swipe/variant-A-pastel-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/02-swipe/variant-A-pastel-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; watercolor pastel</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="swipe-C-codex" data-label="Swipe — C · type-driven (GPT-4o)" data-img="mockups/02-swipe/variant-C-typography-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/02-swipe/variant-C-typography-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; type-driven</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="swipe-A-claude" data-label="Swipe — A · watercolor pastel (Claude)" data-img="mockups/02-swipe/variant-A-pastel-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/02-swipe/variant-A-pastel-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; watercolor pastel</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="swipe-B-claude" data-label="Swipe — B · photographic (Claude)" data-img="mockups/02-swipe/variant-B-photo-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/02-swipe/variant-B-photo-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; photographic</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="swipe-C-claude" data-label="Swipe — C · type-driven (Claude)" data-img="mockups/02-swipe/variant-C-typography-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/02-swipe/variant-C-typography-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; type-driven</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="note-field"><label for="note-swipe">Optional note about this screen</label><textarea id="note-swipe" data-note placeholder="What works, what doesn't, anything you'd tweak…"></textarea></div>
+</section>
+
+<!-- SCREEN 3: GENERATING -->
+<section class="screen" id="s3" data-screen="generating" data-title="The 60-second wait" data-num="03">
+  <div class="screen-head">
+    <div class="screen-title"><span class="screen-num">03</span><h2>The 60-second wait</h2></div>
+    <div class="screen-status" data-status>6 variants &middot; pick one</div>
+  </div>
+  <p class="screen-desc">While the invites render. Must feel like something is being made <em>for</em> you &mdash; not like a spinner you&rsquo;re staring at.</p>
+  <button class="notes-toggle" data-notes-toggle>Designer notes ↓</button>
+  <div class="screen-notes hidden">
+    <b>Designer take:</b> Claude&rsquo;s B nails the voice &mdash; &ldquo;two ready, two still coming in, give it a breath.&rdquo; It reframes latency as intentional pacing. Codex kept calling it an &ldquo;AI designer,&rdquo; which is Canva-tier framing we&rsquo;re trying to avoid.
+  </div>
+  <div class="grid">
+    <figure class="card is-recommended" data-variant="gen-B-claude" data-label="Generating — B · give it a breath (Claude)" data-img="mockups/03-generating/variant-B-claude.png">
+      <span class="ribbon">My pick</span><span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/03-generating/variant-B-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; &ldquo;give it a breath&rdquo;</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="gen-A-claude" data-label="Generating — A · chaptered masthead (Claude)" data-img="mockups/03-generating/variant-A-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/03-generating/variant-A-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; chaptered masthead</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="gen-A-codex" data-label="Generating — A · peach glow (GPT-4o)" data-img="mockups/03-generating/variant-A-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/03-generating/variant-A-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; peach glow</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="gen-B-codex" data-label="Generating — B · sparkle divider (GPT-4o)" data-img="mockups/03-generating/variant-B-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/03-generating/variant-B-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; sparkle divider</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="gen-C-claude" data-label="Generating — C · compact progress (Claude)" data-img="mockups/03-generating/variant-C-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/03-generating/variant-C-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; compact progress</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="gen-C-codex" data-label="Generating — C · to life (GPT-4o)" data-img="mockups/03-generating/variant-C-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/03-generating/variant-C-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; &ldquo;to life&rdquo;</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="note-field"><label for="note-generating">Optional note about this screen</label><textarea id="note-generating" data-note placeholder="What works, what doesn't, anything you'd tweak…"></textarea></div>
+</section>
+
+<!-- SCREEN 4: SHARE -->
+<section class="screen" id="s4" data-screen="share" data-title="The share page guests see" data-num="04">
+  <div class="screen-head">
+    <div class="screen-title"><span class="screen-num">04</span><h2>The share page guests see</h2></div>
+    <div class="screen-status" data-status>6 variants &middot; pick one</div>
+  </div>
+  <p class="screen-desc">When you text the invite link to a friend, this is what they open. Every guest who loves this page is a potential customer &mdash; this is marketing, not a file download.</p>
+  <button class="notes-toggle" data-notes-toggle>Designer notes ↓</button>
+  <div class="screen-notes hidden">
+    <b>Designer take:</b> The B-balanced Codex illustration (girl on a swing in a garden) is the single most beautiful asset in the whole audit. This is the one guests forward to their group chat. Claude&rsquo;s share-page attempts use gradient placeholders instead of real illustrations &mdash; for a page where the artwork IS the product, that gap is decisive.
+  </div>
+  <div class="grid">
+    <figure class="card is-recommended" data-variant="share-B-codex" data-label="Share — B · balanced (GPT-4o)" data-img="mockups/04-share/variant-B-balanced-codex.png">
+      <span class="ribbon">My pick</span><span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/04-share/variant-B-balanced-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; balanced</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="share-A-codex" data-label="Share — A · portrait-heavy (GPT-4o)" data-img="mockups/04-share/variant-A-portrait-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/04-share/variant-A-portrait-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; portrait-heavy</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="share-C-codex" data-label="Share — C · text-forward (GPT-4o)" data-img="mockups/04-share/variant-C-text-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/04-share/variant-C-text-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; text-forward</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="share-A-claude" data-label="Share — A · portrait-heavy (Claude)" data-img="mockups/04-share/variant-A-portrait-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/04-share/variant-A-portrait-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; portrait-heavy</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="share-B-claude" data-label="Share — B · balanced (Claude)" data-img="mockups/04-share/variant-B-balanced-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/04-share/variant-B-balanced-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; balanced</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="share-C-claude" data-label="Share — C · text-forward (Claude)" data-img="mockups/04-share/variant-C-text-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/04-share/variant-C-text-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; text-forward</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="note-field"><label for="note-share">Optional note about this screen</label><textarea id="note-share" data-note placeholder="What works, what doesn't, anything you'd tweak…"></textarea></div>
+</section>
+
+<!-- SCREEN 5: INTAKE -->
+<section class="screen" id="s5" data-screen="intake" data-title="Telling us about the event" data-num="05">
+  <div class="screen-head">
+    <div class="screen-title"><span class="screen-num">05</span><h2>Telling us about the event</h2></div>
+    <div class="screen-status" data-status>9 variants &middot; pick one</div>
+  </div>
+  <p class="screen-desc">The first real screen. Must feel like texting a friend about your kid&rsquo;s party &mdash; not filling out a form.</p>
+  <button class="notes-toggle" data-notes-toggle>Designer notes ↓</button>
+  <div class="screen-notes hidden">
+    <b>Designer take:</b> Claude went deep on voice-first intake and invented four variants. A4 (&ldquo;three small questions&rdquo; pull-quote with an answered line struck through) looks like a designer&rsquo;s notebook. A2 (live transcript while you talk) is the most production-ready voice UI I&rsquo;ve seen in this category. Codex retreated to centered-hero + category chips &mdash; safer but more Typeform-y.
+  </div>
+  <div class="grid">
+    <figure class="card is-recommended" data-variant="intake-A4-claude" data-label="Intake — A4 · three small questions (Claude)" data-img="mockups/05-intake/variant-A4-voice-claude.png">
+      <span class="ribbon">My pick</span><span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-A4-voice-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A4 &middot; three small questions</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-A2-claude" data-label="Intake — A2 · live transcript (Claude)" data-img="mockups/05-intake/variant-A2-voice-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-A2-voice-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A2 &middot; live transcript</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-C-claude" data-label="Intake — C · text + event pills (Claude)" data-img="mockups/05-intake/variant-C-hybrid-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-C-hybrid-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; text + event pills</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-A-claude" data-label="Intake — A · chapter one (Claude)" data-img="mockups/05-intake/variant-A-voice-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-A-voice-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; &ldquo;chapter one&rdquo;</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-B-claude" data-label="Intake — B · text-first (Claude)" data-img="mockups/05-intake/variant-B-text-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-B-text-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; text-first</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-A3-claude" data-label="Intake — A3 · 30 seconds is enough (Claude)" data-img="mockups/05-intake/variant-A3-voice-claude.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-A3-voice-claude.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A3 &middot; &ldquo;30 seconds is enough&rdquo;</div><div class="model">Claude</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-A-codex" data-label="Intake — A · voice (GPT-4o)" data-img="mockups/05-intake/variant-A-voice-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-A-voice-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">A &middot; voice</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-B-codex" data-label="Intake — B · text-first (GPT-4o)" data-img="mockups/05-intake/variant-B-text-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-B-text-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">B &middot; text-first</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+    <figure class="card" data-variant="intake-C-codex" data-label="Intake — C · hybrid (GPT-4o)" data-img="mockups/05-intake/variant-C-hybrid-codex.png">
+      <span class="check">✓</span>
+      <div class="img-wrap"><img src="mockups/05-intake/variant-C-hybrid-codex.png" alt="" /></div>
+      <figcaption class="caption">
+        <div><div class="label">C &middot; hybrid</div><div class="model">GPT-4o</div></div>
+        <div class="actions"><button class="btn-pick">Pick this</button><button class="btn-zoom">Zoom</button></div>
+      </figcaption>
+    </figure>
+  </div>
+  <div class="note-field"><label for="note-intake">Optional note about this screen</label><textarea id="note-intake" data-note placeholder="What works, what doesn't, anything you'd tweak…"></textarea></div>
+</section>
+
+<footer class="page">
+  <p>Invite &middot; design review April 22, 2026 &middot; 33 mockups across 5 screens &middot; Claude Design + GPT-4o</p>
+  <p>Page is noindex &mdash; a private link for Mrs. W.</p>
+</footer>
+
+</div>
+
+<!-- Sticky progress dock -->
+<div class="dock" id="dock">
+  <div class="dock-inner">
+    <div class="dock-progress" id="dock-progress">0 of 5 picked</div>
+    <div class="dock-steps" id="dock-steps"></div>
+    <button class="dock-action" id="dock-action" disabled>Pick all 5 to continue</button>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lb"><img id="lb-img" src="" alt="" /><div class="caption" id="lb-cap"></div></div>
+
+<!-- Flow preview -->
+<div class="flow" id="flow">
+  <div class="flow-head">
+    <div class="flow-title">Your <em>app flow</em> &mdash; tap the arrows or use ← →</div>
+    <button class="flow-close" id="flow-close">✕ Close</button>
+  </div>
+  <div id="flow-stages"></div>
+  <div class="flow-end">
+    <h2>How does this <em>feel</em> as a whole?</h2>
+    <p>Cohesive? One thing sticking out wrong? Anything you&rsquo;d swap? This is the most useful part for me to hear.</p>
+    <textarea id="final-note" placeholder="Write as much or as little as you want…"></textarea>
+    <div class="flow-end-actions">
+      <button class="btn-primary" id="copy-btn">Copy feedback</button>
+      <button class="btn-secondary" id="text-btn">Text it to Blaine</button>
+      <button class="btn-secondary" id="back-btn">Back to the gallery</button>
+    </div>
+    <div id="chain-summary" class="chain-summary" style="display:none"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Copied to clipboard ✓</div>
+
+<script>
+(() => {
+  const SCREENS = [
+    { id:'intake',          num:'01', title:'Tell us about your event' },
+    { id:'generating',      num:'02', title:'The 60-second wait' },
+    { id:'swipe',           num:'03', title:'Swipe the four' },
+    { id:'compare-paywall', num:'04', title:'Compare & pay' },
+    { id:'share',           num:'05', title:'The share page' },
+  ];
+  const STORAGE_KEY = 'invite-review-v1';
+
+  const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  state.picks = state.picks || {};
+  state.notes = state.notes || {};
+  state.finalNote = state.finalNote || '';
+
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  // --- Card selection ---
+  document.querySelectorAll('.card').forEach(card => {
+    const section = card.closest('.screen');
+    const screenId = section.dataset.screen;
+    const variantId = card.dataset.variant;
+
+    if (state.picks[screenId] === variantId) card.classList.add('is-selected');
+
+    const pickBtn = card.querySelector('.btn-pick');
+    const zoomBtn = card.querySelector('.btn-zoom');
+
+    pickBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.picks[screenId] === variantId) {
+        delete state.picks[screenId];
+        card.classList.remove('is-selected');
+      } else {
+        state.picks[screenId] = variantId;
+        section.querySelectorAll('.card').forEach(c => c.classList.remove('is-selected'));
+        card.classList.add('is-selected');
+      }
+      save();
+      updateDock();
+      updateSectionStatus(section);
+    });
+
+    zoomBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openLightbox(card.dataset.img, card.dataset.label);
+    });
+
+    card.querySelector('.img-wrap img').addEventListener('click', () => {
+      openLightbox(card.dataset.img, card.dataset.label);
+    });
+  });
+
+  // --- Designer notes toggle ---
+  document.querySelectorAll('[data-notes-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const notes = btn.nextElementSibling;
+      notes.classList.toggle('hidden');
+      btn.textContent = notes.classList.contains('hidden') ? 'Designer notes ↓' : 'Designer notes ↑';
+    });
+  });
+
+  // --- Per-screen notes ---
+  document.querySelectorAll('[data-note]').forEach(ta => {
+    const screenId = ta.closest('.screen').dataset.screen;
+    if (state.notes[screenId]) ta.value = state.notes[screenId];
+    ta.addEventListener('input', () => {
+      state.notes[screenId] = ta.value;
+      save();
+    });
+  });
+
+  // --- Status line per screen ---
+  function updateSectionStatus(section){
+    const status = section.querySelector('[data-status]');
+    const screenId = section.dataset.screen;
+    if (state.picks[screenId]){
+      const card = section.querySelector(`[data-variant="${state.picks[screenId]}"]`);
+      status.textContent = card.querySelector('.label').textContent + ' picked';
+      status.classList.add('picked');
+    } else {
+      const count = section.querySelectorAll('.card').length;
+      status.textContent = `${count} variants · pick one`;
+      status.classList.remove('picked');
+    }
+  }
+  document.querySelectorAll('section.screen').forEach(updateSectionStatus);
+
+  // --- Dock ---
+  const dockSteps = document.getElementById('dock-steps');
+  const dockProgress = document.getElementById('dock-progress');
+  const dockAction = document.getElementById('dock-action');
+
+  function getCardFor(screenId){
+    const variantId = state.picks[screenId];
+    if (!variantId) return null;
+    return document.querySelector(`[data-variant="${variantId}"]`);
+  }
+
+  function updateDock(){
+    dockSteps.innerHTML = '';
+    SCREENS.forEach(s => {
+      const card = getCardFor(s.id);
+      const step = document.createElement('div');
+      step.className = 'dock-step' + (card ? ' filled' : '');
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      if (card) thumb.style.backgroundImage = `url(${card.dataset.img})`;
+      step.appendChild(thumb);
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = s.num;
+      step.appendChild(label);
+      step.addEventListener('click', () => {
+        document.getElementById('s' + s.num.replace(/^0/, '')).scrollIntoView({behavior:'smooth',block:'start'});
+      });
+      dockSteps.appendChild(step);
+    });
+    const picked = Object.keys(state.picks).length;
+    dockProgress.textContent = `${picked} of 5 picked`;
+    if (picked === 5){
+      dockAction.disabled = false;
+      dockAction.textContent = 'See the flow →';
+    } else {
+      dockAction.disabled = true;
+      dockAction.textContent = `Pick ${5 - picked} more to continue`;
+    }
+  }
+  updateDock();
+
+  dockAction.addEventListener('click', () => {
+    if (Object.keys(state.picks).length === 5) openFlow();
+  });
+
+  // --- Lightbox ---
+  const lb = document.getElementById('lb');
+  const lbImg = document.getElementById('lb-img');
+  const lbCap = document.getElementById('lb-cap');
+  function openLightbox(src, cap){
+    lbImg.src = src; lbCap.textContent = cap || '';
+    lb.classList.add('open');
+  }
+  lb.addEventListener('click', () => lb.classList.remove('open'));
+
+  // --- Flow preview ---
+  const flow = document.getElementById('flow');
+  const flowStages = document.getElementById('flow-stages');
+  let flowIdx = 0;
+
+  function renderFlowStage(){
+    const s = SCREENS[flowIdx];
+    const card = getCardFor(s.id);
+    const note = state.notes[s.id] || '';
+    flowStages.innerHTML = `
+      <div class="flow-stage">
+        <div class="phone"><div class="screen-inner"><img src="${card.dataset.img}" alt="" /></div></div>
+        <div class="flow-meta">
+          <div class="flow-step-label">Step ${flowIdx + 1} of 5</div>
+          <div class="flow-step-title">${s.title}</div>
+          ${note ? `<div class="flow-step-note">&ldquo;${escapeHtml(note)}&rdquo;</div>` : ''}
+        </div>
+        <div class="flow-nav">
+          <button class="flow-btn" id="flow-prev" ${flowIdx===0 ? 'disabled' : ''}>← Back</button>
+          <div class="flow-dots">${SCREENS.map((_,i) => `<span class="${i===flowIdx?'active':''}"></span>`).join('')}</div>
+          <button class="flow-btn" id="flow-next">${flowIdx===SCREENS.length-1 ? 'Done →' : 'Next →'}</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('flow-prev').addEventListener('click', () => { if (flowIdx>0){flowIdx--;renderFlowStage();} });
+    document.getElementById('flow-next').addEventListener('click', () => {
+      if (flowIdx<SCREENS.length-1){ flowIdx++; renderFlowStage(); }
+      else { document.querySelector('.flow-end').scrollIntoView({behavior:'smooth'}); }
+    });
+  }
+
+  function openFlow(){
+    flowIdx = 0;
+    renderFlowStage();
+    flow.classList.add('open');
+    flow.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('final-note').value = state.finalNote;
+  }
+  document.getElementById('flow-close').addEventListener('click', closeFlow);
+  document.getElementById('back-btn').addEventListener('click', closeFlow);
+  function closeFlow(){ flow.classList.remove('open'); document.body.style.overflow = ''; }
+
+  document.getElementById('final-note').addEventListener('input', (e) => {
+    state.finalNote = e.target.value; save();
+  });
+
+  // --- Feedback output ---
+  function buildFeedback(){
+    const lines = [];
+    lines.push("Mrs. W's design review — " + new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}));
+    lines.push('');
+    lines.push('── Flow chain ──');
+    lines.push(SCREENS.map(s => {
+      const card = getCardFor(s.id);
+      return `  ${s.num}. ${s.title}: ${card ? card.querySelector('.label').textContent + ' (' + card.querySelector('.model').textContent + ')' : '—'}`;
+    }).join('\n'));
+    lines.push('');
+    lines.push('── Per-screen picks & notes ──');
+    SCREENS.forEach(s => {
+      const card = getCardFor(s.id);
+      const note = (state.notes[s.id] || '').trim();
+      lines.push(`\n${s.num}. ${s.title}`);
+      if (card){
+        lines.push(`   Picked: ${card.querySelector('.label').textContent} — ${card.querySelector('.model').textContent}`);
+      }
+      if (note) lines.push(`   Note:   ${note}`);
+    });
+    const final = (state.finalNote || '').trim();
+    if (final){
+      lines.push('');
+      lines.push('── Overall reaction ──');
+      lines.push(final);
+    }
+    return lines.join('\n');
+  }
+
+  document.getElementById('copy-btn').addEventListener('click', async () => {
+    const text = buildFeedback();
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Copied to clipboard ✓');
+    } catch(e){
+      const box = document.getElementById('chain-summary');
+      box.style.display = 'block';
+      box.textContent = text;
+      showToast('Copy failed — select the text below');
+    }
+  });
+
+  document.getElementById('text-btn').addEventListener('click', () => {
+    const text = buildFeedback();
+    const sms = 'sms:?body=' + encodeURIComponent(text);
+    window.location.href = sms;
+  });
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+
+  // --- Keyboard ---
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape'){
+      if (lb.classList.contains('open')) lb.classList.remove('open');
+      else if (flow.classList.contains('open')) closeFlow();
+    }
+    if (flow.classList.contains('open')){
+      if (e.key === 'ArrowRight' && flowIdx < SCREENS.length-1){ flowIdx++; renderFlowStage(); }
+      if (e.key === 'ArrowLeft' && flowIdx > 0){ flowIdx--; renderFlowStage(); }
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
