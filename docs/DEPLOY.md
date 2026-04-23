@@ -59,3 +59,21 @@ Option B keeps one source of truth (Vercel) instead of two.
 ## Cost watch
 
 `gpt-image-2` cost per 4-image generation is unknown until first run. Watch the OpenAI dashboard after the first few generations. If real cost > ~$1.50 / 4 images, the free-swiper abuse defense in the design doc needs revisiting before public launch.
+
+## SonarCloud
+
+Static analysis runs via **SonarCloud Automatic Analysis** (no GitHub Action required).
+
+- **Org:** `optomachina` (same as Overdrafter)
+- **Project key:** `optomachina_invite-generator`
+- **Config:** `sonar-project.properties` + `.sonarcloud.properties` at the repo root
+
+One-time setup (manual, in the SonarCloud dashboard):
+
+1. Go to https://sonarcloud.io and sign in with GitHub.
+2. **+ → Analyze new project → Import an organization from GitHub** (skip if `optomachina` already exists).
+3. Pick `optomachina/invite-generator` from the repo list → **Set up**.
+4. On the project page → **Administration → Analysis Method → Automatic Analysis: ON**.
+5. The next push to `main` (or any PR) will trigger an analysis; results comment on the PR as the **SonarCloud Code Analysis** check.
+
+The `sonar.exclusions` in the properties files keep `node_modules`, `.next`, `.vercel`, lockfile, and tsbuildinfo out of analysis.
