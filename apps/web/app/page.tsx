@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
 
 const HARDCODED_INTAKE = {
   honoree: "Lily",
@@ -11,12 +12,6 @@ const HARDCODED_INTAKE = {
   location: "Magnolia Park, Pavilion 3",
   vibe: "garden tea-party, soft pastels, illustrated florals, hand-drawn feel",
 };
-
-type Model = "gpt-image-2" | "gpt-image-1";
-type Quality = "low" | "medium" | "high" | "auto";
-type Size = "1024x1024" | "1024x1536" | "1536x1024" | "auto";
-
-type Settings = { model: Model; quality: Quality; size: Size; n: number };
 
 type GenResponse = {
   images: { b64_json?: string }[];
@@ -32,26 +27,6 @@ const MODELS: { id: Model; label: string }[] = [
 ];
 const QUALITIES: Quality[] = ["low", "medium", "high", "auto"];
 const SIZES: Size[] = ["1024x1536", "1024x1024", "1536x1024", "auto"];
-
-// Mirrors the table in route.ts so the UI can show a pre-flight estimate.
-const COST: Record<Model, Record<Exclude<Quality, "auto">, Record<Exclude<Size, "auto">, number>>> = {
-  "gpt-image-1": {
-    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
-    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
-    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
-  },
-  "gpt-image-2": {
-    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
-    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
-    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
-  },
-};
-
-function estimate(s: Settings): number {
-  const q = (s.quality === "auto" ? "medium" : s.quality) as Exclude<Quality, "auto">;
-  const sz = (s.size === "auto" ? "1024x1536" : s.size) as Exclude<Size, "auto">;
-  return COST[s.model][q][sz] * s.n;
-}
 
 function b64ToObjectUrl(b64: string): string {
   const bin = atob(b64);
@@ -77,7 +52,7 @@ export default function Page() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const estCost = useMemo(() => estimate(settings), [settings]);
+  const estCost = useMemo(() => estimateCostUsd(settings), [settings]);
 
   useEffect(() => {
     if (!result) return;

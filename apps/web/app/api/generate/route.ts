@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import {
+  estimateCostUsd,
+  VALID_MODELS,
+  VALID_QUALITY,
+  VALID_SIZE,
+  type Model,
+  type Quality,
+  type Settings,
+  type Size,
+} from "@/lib/pricing";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -13,43 +23,6 @@ type Intake = {
   location: string;
   vibe: string;
 };
-
-type Model = "gpt-image-2" | "gpt-image-1";
-type Quality = "low" | "medium" | "high" | "auto";
-type Size = "1024x1024" | "1024x1536" | "1536x1024" | "auto";
-
-type Settings = {
-  model: Model;
-  quality: Quality;
-  size: Size;
-  n: number;
-};
-
-const VALID_MODELS: Model[] = ["gpt-image-2", "gpt-image-1"];
-const VALID_QUALITY: Quality[] = ["low", "medium", "high", "auto"];
-const VALID_SIZE: Size[] = ["1024x1024", "1024x1536", "1536x1024", "auto"];
-
-// Per-image USD cost. gpt-image-1 numbers from OpenAI's published pricing.
-// gpt-image-2 is unknown at training cutoff — using v1 numbers as a placeholder
-// until the first real invoice. Refine in DEPLOY.md cost-watch step.
-const COST_TABLE: Record<Model, Record<Exclude<Quality, "auto">, Record<Exclude<Size, "auto">, number>>> = {
-  "gpt-image-1": {
-    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
-    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
-    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
-  },
-  "gpt-image-2": {
-    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
-    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
-    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
-  },
-};
-
-function estimateCostUsd(s: Settings): number {
-  const q: Exclude<Quality, "auto"> = s.quality === "auto" ? "medium" : s.quality;
-  const sz: Exclude<Size, "auto"> = s.size === "auto" ? "1024x1536" : s.size;
-  return COST_TABLE[s.model][q][sz] * s.n;
-}
 
 function ordinal(n: number): string {
   const mod100 = n % 100;
