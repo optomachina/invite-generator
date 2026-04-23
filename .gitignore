@@ -6,3 +6,38 @@
 
 # gstack session state (local logs, browse audit)
 .gstack/
+
+# Node / package managers
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Vercel project link (per-machine)
+.vercel/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env*.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+next-env.d.ts
+
+# Editor / IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS junk
+Thumbs.db
