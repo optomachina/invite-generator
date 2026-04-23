@@ -14,8 +14,38 @@ type Intake = {
   vibe: string;
 };
 
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1: return `${n}st`;
+    case 2: return `${n}nd`;
+    case 3: return `${n}rd`;
+    default: return `${n}th`;
+  }
+}
+
+function validateIntake(raw: unknown): Intake | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const required = ["honoree", "event", "date", "time", "location", "vibe"] as const;
+  for (const k of required) {
+    if (typeof r[k] !== "string" || !(r[k] as string).trim()) return null;
+  }
+  if (r.age !== undefined && (typeof r.age !== "number" || !Number.isFinite(r.age))) return null;
+  return {
+    honoree: r.honoree as string,
+    age: r.age as number | undefined,
+    event: r.event as string,
+    date: r.date as string,
+    time: r.time as string,
+    location: r.location as string,
+    vibe: r.vibe as string,
+  };
+}
+
 function buildPrompt(intake: Intake): string {
-  const ageBit = intake.age ? `${intake.age}th ` : "";
+  const ageBit = intake.age ? `${ordinal(intake.age)} ` : "";
   return [
     `An editorial-quality custom invitation design for ${intake.honoree}'s ${ageBit}${intake.event}.`,
     `Vibe: ${intake.vibe}.`,
@@ -38,11 +68,19 @@ export async function POST(req: Request) {
     );
   }
 
-  let intake: Intake;
+  let body: unknown;
   try {
-    intake = (await req.json()) as Intake;
+    body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid json body" }, { status: 400 });
+  }
+
+  const intake = validateIntake(body);
+  if (!intake) {
+    return NextResponse.json(
+      { error: "invalid intake: requires non-empty honoree, event, date, time, location, vibe" },
+      { status: 400 },
+    );
   }
 
   const prompt = buildPrompt(intake);
@@ -50,25 +88,20 @@ export async function POST(req: Request) {
 
   const t0 = Date.now();
   try {
-    const result = await openai.images.generate({
-      model: "gpt-image-2",
-      prompt,
-      n: 4,
-      size: "1024x1536",
-    });
+    const result = await openai.images.generate(
+      {
+        model: "gpt-image-2",
+        prompt,
+        n: 4,
+        size: "1024x1536",
+      },
+      { signal: AbortSignal.timeout(110_000) },
+    );
     const ms = Date.now() - t0;
 
-    const images = (result.data ?? []).map((d) => ({
-      url: d.url,
-      b64_json: d.b64_json,
-    }));
+    const images = (result.data ?? []).map((d) => ({ b64_json: d.b64_json }));
 
-    return NextResponse.json({
-      images,
-      prompt,
-      ms,
-      cost_estimate: "~$0.76 for 4 (refine after first run)",
-    });
+    return NextResponse.json({ images, prompt, ms });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(

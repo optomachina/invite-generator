@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const HARDCODED_INTAKE = {
   honoree: "Lily",
@@ -13,16 +13,35 @@ const HARDCODED_INTAKE = {
 };
 
 type GenResponse = {
-  images: { url?: string; b64_json?: string }[];
+  images: { b64_json?: string }[];
   prompt: string;
   ms: number;
-  cost_estimate?: string;
 };
+
+function b64ToObjectUrl(b64: string): string {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const blob = new Blob([bytes], { type: "image/png" });
+  return URL.createObjectURL(blob);
+}
 
 export default function Page() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenResponse | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!result) return;
+    const urls = result.images
+      .map((img) => (img.b64_json ? b64ToObjectUrl(img.b64_json) : ""))
+      .filter(Boolean);
+    setImageUrls(urls);
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [result]);
 
   async function generate() {
     setLoading(true);
@@ -82,33 +101,20 @@ export default function Page() {
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-serif text-2xl">4 concepts</h2>
             <span className="text-xs text-ink/60">
-              {(result.ms / 1000).toFixed(1)}s · {result.cost_estimate ?? ""}
+              {(result.ms / 1000).toFixed(1)}s
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {result.images.map((img, i) => {
-              const src = img.url
-                ? img.url
-                : img.b64_json
-                  ? `data:image/png;base64,${img.b64_json}`
-                  : "";
-              return (
-                <div
-                  key={i}
-                  className="overflow-hidden rounded-md border border-ink/10 bg-white shadow-sm"
-                >
-                  {src ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={src} alt={`Concept ${i + 1}`} className="w-full h-auto" />
-                  ) : (
-                    <div className="aspect-[5/7] flex items-center justify-center text-sm text-ink/50">
-                      no image
-                    </div>
-                  )}
-                  <div className="p-3 text-xs text-ink/60">Concept {i + 1}</div>
-                </div>
-              );
-            })}
+            {imageUrls.map((src, i) => (
+              <div
+                key={i}
+                className="overflow-hidden rounded-md border border-ink/10 bg-white shadow-sm"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`Concept ${i + 1}`} className="w-full h-auto" />
+                <div className="p-3 text-xs text-ink/60">Concept {i + 1}</div>
+              </div>
+            ))}
           </div>
           <details className="mt-6">
             <summary className="cursor-pointer text-xs text-ink/60">prompt used</summary>
