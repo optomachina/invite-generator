@@ -65,8 +65,7 @@ export function validateSettings(raw: unknown): Settings {
 
 export function buildPrompt(intake: Intake): string {
   const eventLabel =
-    intake.age !== undefined &&
-    !new RegExp(`\\b${ordinal(intake.age)}\\b`, "i").test(intake.event)
+    intake.age !== undefined && !containsWord(intake.event, ordinal(intake.age))
       ? `${ordinal(intake.age)} ${intake.event}`
       : intake.event;
   return [
@@ -80,4 +79,21 @@ export function buildPrompt(intake: Intake): string {
     `date "${intake.date}", time "${intake.time}", location "${intake.location}") with`,
     `editorial serif typography. Make text crisp and legible.`,
   ].join(" ");
+}
+
+// Word-boundary substring check using a static pattern so we never construct
+// a RegExp from interpolated input.
+const ALNUM = /[a-z0-9]/i;
+
+function containsWord(haystack: string, needle: string): boolean {
+  const h = haystack.toLowerCase();
+  const n = needle.toLowerCase();
+  let i = h.indexOf(n);
+  while (i !== -1) {
+    const before = i === 0 ? "" : h[i - 1];
+    const after = h[i + n.length] ?? "";
+    if (!ALNUM.test(before) && !ALNUM.test(after)) return true;
+    i = h.indexOf(n, i + 1);
+  }
+  return false;
 }
