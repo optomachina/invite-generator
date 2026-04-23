@@ -32,7 +32,12 @@ function validateIntake(raw: unknown): Intake | null {
   for (const k of required) {
     if (typeof r[k] !== "string" || !(r[k] as string).trim()) return null;
   }
-  if (r.age !== undefined && (typeof r.age !== "number" || !Number.isFinite(r.age))) return null;
+  if (
+    r.age !== undefined &&
+    (typeof r.age !== "number" || !Number.isInteger(r.age) || r.age <= 0)
+  ) {
+    return null;
+  }
   return {
     honoree: r.honoree as string,
     age: r.age as number | undefined,
@@ -45,7 +50,7 @@ function validateIntake(raw: unknown): Intake | null {
 }
 
 function buildPrompt(intake: Intake): string {
-  const ageBit = intake.age ? `${ordinal(intake.age)} ` : "";
+  const ageBit = intake.age !== undefined ? `${ordinal(intake.age)} ` : "";
   return [
     `An editorial-quality custom invitation design for ${intake.honoree}'s ${ageBit}${intake.event}.`,
     `Vibe: ${intake.vibe}.`,
