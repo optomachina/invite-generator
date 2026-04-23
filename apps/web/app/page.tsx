@@ -3,7 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
 
-const HARDCODED_INTAKE = {
+type Intake = {
+  honoree: string;
+  age: number | "";
+  event: string;
+  date: string;
+  time: string;
+  location: string;
+  vibe: string;
+};
+
+const DEFAULT_INTAKE: Intake = {
   honoree: "Lily",
   age: 5,
   event: "birthday party",
@@ -47,6 +57,7 @@ export default function Page() {
     size: "1024x1536",
     n: 1,
   });
+  const [intake, setIntake] = useState<Intake>(DEFAULT_INTAKE);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenResponse | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -70,10 +81,14 @@ export default function Page() {
     setError(null);
     setResult(null);
     try {
+      const payloadIntake = {
+        ...intake,
+        age: intake.age === "" ? undefined : intake.age,
+      };
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ intake: HARDCODED_INTAKE, settings }),
+        body: JSON.stringify({ intake: payloadIntake, settings }),
       });
       if (!res.ok) {
         const t = await res.text();
@@ -93,7 +108,7 @@ export default function Page() {
       <header className="mb-8">
         <h1 className="font-serif text-4xl tracking-tight">Invite — slice 0</h1>
         <p className="mt-2 text-sm text-ink/70">
-          Smallest end-to-end test. Hardcoded intake. Configurable model/quality/size/count.
+          Smallest end-to-end test. Editable intake. Configurable model/quality/size/count.
         </p>
       </header>
 
@@ -146,12 +161,65 @@ export default function Page() {
           </Field>
         </div>
 
-        <details className="mb-4">
-          <summary className="cursor-pointer text-xs text-ink/60">intake (hardcoded)</summary>
-          <pre className="mt-2 whitespace-pre-wrap text-xs text-ink/70">
-            {JSON.stringify(HARDCODED_INTAKE, null, 2)}
-          </pre>
-        </details>
+        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Honoree">
+            <input
+              value={intake.honoree}
+              onChange={(e) => setIntake({ ...intake, honoree: e.target.value })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Age (optional)">
+            <input
+              type="number"
+              min={1}
+              value={intake.age}
+              onChange={(e) => {
+                const v = e.target.value;
+                setIntake({ ...intake, age: v === "" ? "" : Math.max(1, Math.floor(Number(v))) });
+              }}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Event">
+            <input
+              value={intake.event}
+              onChange={(e) => setIntake({ ...intake, event: e.target.value })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Date">
+            <input
+              value={intake.date}
+              onChange={(e) => setIntake({ ...intake, date: e.target.value })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Time">
+            <input
+              value={intake.time}
+              onChange={(e) => setIntake({ ...intake, time: e.target.value })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Location">
+            <input
+              value={intake.location}
+              onChange={(e) => setIntake({ ...intake, location: e.target.value })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="Vibe">
+              <textarea
+                value={intake.vibe}
+                onChange={(e) => setIntake({ ...intake, vibe: e.target.value })}
+                rows={2}
+                className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+              />
+            </Field>
+          </div>
+        </div>
 
         <div className="flex items-center gap-4">
           <button
