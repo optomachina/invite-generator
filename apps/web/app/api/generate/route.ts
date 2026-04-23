@@ -12,7 +12,9 @@ import {
 } from "@/lib/pricing";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// High-quality 1024x1536 generations regularly run 60-180s. Vercel Pro
+// allows up to 800s; 300 leaves headroom without inviting runaway jobs.
+export const maxDuration = 300;
 
 type Intake = {
   honoree: string;
@@ -127,7 +129,7 @@ export async function POST(req: Request) {
         size: settings.size,
         quality: settings.quality,
       },
-      { signal: AbortSignal.timeout(110_000) },
+      { signal: AbortSignal.timeout(290_000) },
     );
     const ms = Date.now() - t0;
 
