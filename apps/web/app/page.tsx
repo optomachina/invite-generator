@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 const HARDCODED_INTAKE = {
   honoree: "Lily",
   age: 5,
-  event: "5th birthday party",
+  event: "birthday party",
   date: "Saturday, June 13",
   time: "2:00 PM",
   location: "Magnolia Park, Pavilion 3",

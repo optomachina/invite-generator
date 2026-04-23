@@ -50,9 +50,13 @@ function validateIntake(raw: unknown): Intake | null {
 }
 
 function buildPrompt(intake: Intake): string {
-  const ageBit = intake.age !== undefined ? `${ordinal(intake.age)} ` : "";
+  const eventLabel =
+    intake.age !== undefined &&
+    !new RegExp(`\\b${ordinal(intake.age)}\\b`, "i").test(intake.event)
+      ? `${ordinal(intake.age)} ${intake.event}`
+      : intake.event;
   return [
-    `An editorial-quality custom invitation design for ${intake.honoree}'s ${ageBit}${intake.event}.`,
+    `An editorial-quality custom invitation design for ${intake.honoree}'s ${eventLabel}.`,
     `Vibe: ${intake.vibe}.`,
     `Composition: portrait 5x7, leave clean negative space in the upper third for event text overlay.`,
     `Style references: hand-illustrated, warm cream paper, restrained color palette,`,
@@ -104,7 +108,17 @@ export async function POST(req: Request) {
     );
     const ms = Date.now() - t0;
 
-    const images = (result.data ?? []).map((d) => ({ b64_json: d.b64_json }));
+    const images = (result.data ?? [])
+      .map((d) => d.b64_json)
+      .filter((b): b is string => typeof b === "string" && b.length > 0)
+      .map((b64_json) => ({ b64_json }));
+
+    if (images.length !== 4) {
+      return NextResponse.json(
+        { error: `openai returned ${images.length}/4 usable images` },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({ images, prompt, ms });
   } catch (err) {
