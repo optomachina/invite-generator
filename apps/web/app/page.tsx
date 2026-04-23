@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const HARDCODED_INTAKE = {
   honoree: "Lily",
@@ -12,11 +12,46 @@ const HARDCODED_INTAKE = {
   vibe: "garden tea-party, soft pastels, illustrated florals, hand-drawn feel",
 };
 
+type Model = "gpt-image-2" | "gpt-image-1";
+type Quality = "low" | "medium" | "high" | "auto";
+type Size = "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+
+type Settings = { model: Model; quality: Quality; size: Size; n: number };
+
 type GenResponse = {
   images: { b64_json?: string }[];
   prompt: string;
   ms: number;
+  costUsd: number;
+  settings: Settings;
 };
+
+const MODELS: { id: Model; label: string }[] = [
+  { id: "gpt-image-2", label: "gpt-image-2 (preferred)" },
+  { id: "gpt-image-1", label: "gpt-image-1 (legacy)" },
+];
+const QUALITIES: Quality[] = ["low", "medium", "high", "auto"];
+const SIZES: Size[] = ["1024x1536", "1024x1024", "1536x1024", "auto"];
+
+// Mirrors the table in route.ts so the UI can show a pre-flight estimate.
+const COST: Record<Model, Record<Exclude<Quality, "auto">, Record<Exclude<Size, "auto">, number>>> = {
+  "gpt-image-1": {
+    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
+    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
+    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
+  },
+  "gpt-image-2": {
+    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
+    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
+    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
+  },
+};
+
+function estimate(s: Settings): number {
+  const q = (s.quality === "auto" ? "medium" : s.quality) as Exclude<Quality, "auto">;
+  const sz = (s.size === "auto" ? "1024x1536" : s.size) as Exclude<Size, "auto">;
+  return COST[s.model][q][sz] * s.n;
+}
 
 function b64ToObjectUrl(b64: string): string {
   const bin = atob(b64);
@@ -26,11 +61,23 @@ function b64ToObjectUrl(b64: string): string {
   return URL.createObjectURL(blob);
 }
 
+function fmtUsd(n: number): string {
+  return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+}
+
 export default function Page() {
+  const [settings, setSettings] = useState<Settings>({
+    model: "gpt-image-2",
+    quality: "low",
+    size: "1024x1536",
+    n: 1,
+  });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenResponse | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const estCost = useMemo(() => estimate(settings), [settings]);
 
   useEffect(() => {
     if (!result) return;
@@ -51,7 +98,7 @@ export default function Page() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(HARDCODED_INTAKE),
+        body: JSON.stringify({ intake: HARDCODED_INTAKE, settings }),
       });
       if (!res.ok) {
         const t = await res.text();
@@ -71,23 +118,81 @@ export default function Page() {
       <header className="mb-8">
         <h1 className="font-serif text-4xl tracking-tight">Invite — slice 0</h1>
         <p className="mt-2 text-sm text-ink/70">
-          Smallest end-to-end test. Hardcoded intake. 4 concepts from gpt-image-2.
-          No swipe, no payment, no infra.
+          Smallest end-to-end test. Hardcoded intake. Configurable model/quality/size/count.
         </p>
       </header>
 
       <section className="mb-8 rounded-lg border border-ink/10 bg-white/40 p-5">
-        <h2 className="font-serif text-lg mb-2">Intake (hardcoded)</h2>
-        <pre className="whitespace-pre-wrap text-sm text-ink/80">
-          {JSON.stringify(HARDCODED_INTAKE, null, 2)}
-        </pre>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="mt-5 inline-flex items-center rounded-full bg-ochre px-6 py-3 text-white text-sm font-medium tracking-wide hover:bg-ochre/90 disabled:opacity-50"
-        >
-          {loading ? "Sketching 4 concepts…" : "Generate 4 invites"}
-        </button>
+        <h2 className="font-serif text-lg mb-3">Settings</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <Field label="Model">
+            <select
+              value={settings.model}
+              onChange={(e) => setSettings({ ...settings, model: e.target.value as Model })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            >
+              {MODELS.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Quality">
+            <select
+              value={settings.quality}
+              onChange={(e) => setSettings({ ...settings, quality: e.target.value as Quality })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            >
+              {QUALITIES.map((q) => (
+                <option key={q} value={q}>{q}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Size">
+            <select
+              value={settings.size}
+              onChange={(e) => setSettings({ ...settings, size: e.target.value as Size })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            >
+              {SIZES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Count">
+            <select
+              value={settings.n}
+              onChange={(e) => setSettings({ ...settings, n: Number(e.target.value) })}
+              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
+            >
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        <details className="mb-4">
+          <summary className="cursor-pointer text-xs text-ink/60">intake (hardcoded)</summary>
+          <pre className="mt-2 whitespace-pre-wrap text-xs text-ink/70">
+            {JSON.stringify(HARDCODED_INTAKE, null, 2)}
+          </pre>
+        </details>
+
+        <div className="flex items-center gap-4">
+          <button
+            onClick={generate}
+            disabled={loading}
+            className="inline-flex items-center rounded-full bg-ochre px-6 py-3 text-white text-sm font-medium tracking-wide hover:bg-ochre/90 disabled:opacity-50"
+          >
+            {loading ? "Sketching…" : `Generate ${settings.n} invite${settings.n === 1 ? "" : "s"}`}
+          </button>
+          <span className="text-sm text-ink/70">
+            est. cost: <strong className="text-ink">{fmtUsd(estCost)}</strong>
+          </span>
+        </div>
+        <p className="mt-2 text-xs text-ink/50">
+          Estimates use gpt-image-1 published pricing. gpt-image-2 actuals will be confirmed after first run.
+        </p>
       </section>
 
       {error && (
@@ -99,10 +204,16 @@ export default function Page() {
       {result && (
         <section>
           <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="font-serif text-2xl">4 concepts</h2>
-            <span className="text-xs text-ink/60">
-              {(result.ms / 1000).toFixed(1)}s
-            </span>
+            <h2 className="font-serif text-2xl">
+              {result.images.length} concept{result.images.length === 1 ? "" : "s"}
+            </h2>
+            <div className="flex items-center gap-4 text-xs text-ink/70">
+              <span>{(result.ms / 1000).toFixed(1)}s</span>
+              <span>{fmtUsd(result.costUsd)}</span>
+              <span className="text-ink/50">
+                {result.settings.model} · {result.settings.quality} · {result.settings.size}
+              </span>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {imageUrls.map((src, i) => (
@@ -123,5 +234,14 @@ export default function Page() {
         </section>
       )}
     </main>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-xs text-ink/60 mb-1">{label}</span>
+      {children}
+    </label>
   );
 }

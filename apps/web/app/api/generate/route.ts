@@ -14,6 +14,43 @@ type Intake = {
   vibe: string;
 };
 
+type Model = "gpt-image-2" | "gpt-image-1";
+type Quality = "low" | "medium" | "high" | "auto";
+type Size = "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+
+type Settings = {
+  model: Model;
+  quality: Quality;
+  size: Size;
+  n: number;
+};
+
+const VALID_MODELS: Model[] = ["gpt-image-2", "gpt-image-1"];
+const VALID_QUALITY: Quality[] = ["low", "medium", "high", "auto"];
+const VALID_SIZE: Size[] = ["1024x1024", "1024x1536", "1536x1024", "auto"];
+
+// Per-image USD cost. gpt-image-1 numbers from OpenAI's published pricing.
+// gpt-image-2 is unknown at training cutoff — using v1 numbers as a placeholder
+// until the first real invoice. Refine in DEPLOY.md cost-watch step.
+const COST_TABLE: Record<Model, Record<Exclude<Quality, "auto">, Record<Exclude<Size, "auto">, number>>> = {
+  "gpt-image-1": {
+    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
+    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
+    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
+  },
+  "gpt-image-2": {
+    low:    { "1024x1024": 0.011, "1024x1536": 0.016, "1536x1024": 0.016 },
+    medium: { "1024x1024": 0.042, "1024x1536": 0.063, "1536x1024": 0.063 },
+    high:   { "1024x1024": 0.167, "1024x1536": 0.25,  "1536x1024": 0.25  },
+  },
+};
+
+function estimateCostUsd(s: Settings): number {
+  const q: Exclude<Quality, "auto"> = s.quality === "auto" ? "medium" : s.quality;
+  const sz: Exclude<Size, "auto"> = s.size === "auto" ? "1024x1536" : s.size;
+  return COST_TABLE[s.model][q][sz] * s.n;
+}
+
 function ordinal(n: number): string {
   const mod100 = n % 100;
   if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
@@ -47,6 +84,16 @@ function validateIntake(raw: unknown): Intake | null {
     location: r.location as string,
     vibe: r.vibe as string,
   };
+}
+
+function validateSettings(raw: unknown): Settings {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const model = VALID_MODELS.includes(r.model as Model) ? (r.model as Model) : "gpt-image-2";
+  const quality = VALID_QUALITY.includes(r.quality as Quality) ? (r.quality as Quality) : "low";
+  const size = VALID_SIZE.includes(r.size as Size) ? (r.size as Size) : "1024x1536";
+  const nRaw = typeof r.n === "number" && Number.isInteger(r.n) ? r.n : 1;
+  const n = Math.min(Math.max(nRaw, 1), 4);
+  return { model, quality, size, n };
 }
 
 function buildPrompt(intake: Intake): string {
@@ -84,13 +131,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid json body" }, { status: 400 });
   }
 
-  const intake = validateIntake(body);
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const intake = validateIntake(b.intake ?? body);
   if (!intake) {
     return NextResponse.json(
       { error: "invalid intake: requires non-empty honoree, event, date, time, location, vibe" },
       { status: 400 },
     );
   }
+  const settings = validateSettings(b.settings);
 
   const prompt = buildPrompt(intake);
   const openai = new OpenAI({ apiKey });
@@ -99,10 +148,11 @@ export async function POST(req: Request) {
   try {
     const result = await openai.images.generate(
       {
-        model: "gpt-image-2",
+        model: settings.model,
         prompt,
-        n: 4,
-        size: "1024x1536",
+        n: settings.n,
+        size: settings.size,
+        quality: settings.quality,
       },
       { signal: AbortSignal.timeout(110_000) },
     );
@@ -113,14 +163,15 @@ export async function POST(req: Request) {
       .filter((b): b is string => typeof b === "string" && b.length > 0)
       .map((b64_json) => ({ b64_json }));
 
-    if (images.length !== 4) {
+    if (images.length !== settings.n) {
       return NextResponse.json(
-        { error: `openai returned ${images.length}/4 usable images` },
+        { error: `openai returned ${images.length}/${settings.n} usable images` },
         { status: 502 },
       );
     }
 
-    return NextResponse.json({ images, prompt, ms });
+    const costUsd = estimateCostUsd(settings);
+    return NextResponse.json({ images, prompt, ms, costUsd, settings });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
