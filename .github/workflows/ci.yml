@@ -61,8 +61,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: bun run evidence:install
+      - name: Install Playwright browsers and system deps
+        run: bunx playwright install --with-deps chromium webkit
 
       - name: Capture PR evidence
         id: capture
