@@ -55,9 +55,17 @@ The Playwright harness creates:
 - `.context/artifacts/<task-slug>/mobile-final.png`
 - `.context/artifacts/<task-slug>/playwright-output/...` for videos and retry traces
 
+For pull requests, GitHub Actions also:
+- reruns evidence capture in CI
+- uploads the result as a workflow artifact
+- posts or updates a PR comment with the artifact link
+
+That PR comment is the reviewer-facing location for evidence in GitHub.
+
 ## Notes
 
 - Screenshots are captured only after the page is loaded and the main region is visible.
 - Video is optional by default because the better default is screenshots for final state and video only for dynamic behavior.
 - Traces are kept on first retry, which matches Playwright guidance for useful debugging without recording everything on every passing run.
 - If a task needs custom interaction coverage, add or edit a dedicated Playwright spec instead of overloading the generic capture spec.
+- GitHub artifact URLs require repository access and are intended for reviewers already in the PR.

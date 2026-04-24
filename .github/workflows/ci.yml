@@ -38,3 +38,102 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  pr-evidence:
+    name: pr evidence
+    if: github.event_name == 'pull_request'
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bun run evidence:install
+
+      - name: Capture PR evidence
+        id: capture
+        continue-on-error: true
+        env:
+          EVIDENCE_TASK: pr-${{ github.event.pull_request.number }}
+          EVIDENCE_VIDEO: "1"
+        run: bun run evidence:capture
+
+      - name: Upload PR evidence artifact
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-evidence-${{ github.event.pull_request.number }}
+          path: .context/artifacts/pr-${{ github.event.pull_request.number }}/
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
+
+      - name: Comment PR with evidence link
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          ARTIFACT_NAME: pr-evidence-${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const marker = '<!-- pr-evidence-comment -->';
+            const body = [
+              marker,
+              '## PR Evidence',
+              '',
+              process.env.CAPTURE_OUTCOME === 'success'
+                ? 'Fresh screenshots and video are attached to this workflow run.'
+                : 'Evidence capture failed in CI. Check the workflow run for logs.',
+              '',
+              `- Artifact: [${process.env.ARTIFACT_NAME}](${process.env.ARTIFACT_URL || process.env.RUN_URL})`,
+              `- Workflow run: [View run](${process.env.RUN_URL})`,
+              '- Expected contents: `desktop-final.png`, `mobile-final.png`, desktop `video.webm`, mobile `video.webm`',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail job if evidence capture failed
+        if: steps.capture.outcome == 'failure'
+        run: exit 1
