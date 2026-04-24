@@ -58,7 +58,8 @@ The Playwright harness creates:
 For pull requests, GitHub Actions also:
 - reruns evidence capture in CI
 - uploads the result as a workflow artifact
-- posts or updates a PR comment with the artifact link
+- publishes reviewer-facing evidence files to a dedicated PR evidence branch
+- posts or updates a PR comment with inline screenshot previews, animated motion previews, and artifact links
 
 That PR comment is the reviewer-facing location for evidence in GitHub.
 
@@ -69,3 +70,4 @@ That PR comment is the reviewer-facing location for evidence in GitHub.
 - Traces are kept on first retry, which matches Playwright guidance for useful debugging without recording everything on every passing run.
 - If a task needs custom interaction coverage, add or edit a dedicated Playwright spec instead of overloading the generic capture spec.
 - GitHub artifact URLs require repository access and are intended for reviewers already in the PR.
+- GitHub comments support inline images from URLs. For automated inline previews, this repo publishes PNG and GIF evidence files to a PR-specific branch and references them from the comment.
