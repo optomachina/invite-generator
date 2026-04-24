@@ -64,6 +64,9 @@ jobs:
       - name: Install Playwright browsers and system deps
         run: bunx playwright install --with-deps chromium webkit
 
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Capture PR evidence
         id: capture
         continue-on-error: true
@@ -91,6 +94,8 @@ jobs:
           ARTIFACT_DIR="$GITHUB_WORKSPACE/.context/artifacts/pr-${{ github.event.pull_request.number }}"
           INLINE_DIR="$ARTIFACT_DIR/inline"
           mkdir -p "$INLINE_DIR"
+          desktop_video=""
+          mobile_video=""
 
           for image in desktop-final.png mobile-final.png; do
             if [ -f "$ARTIFACT_DIR/$image" ]; then
@@ -98,17 +103,25 @@ jobs:
             fi
           done
 
-          if command -v ffmpeg >/dev/null 2>&1; then
+          if [ -d "$ARTIFACT_DIR/playwright-output" ]; then
             desktop_video="$(find "$ARTIFACT_DIR/playwright-output" -path '*desktop*/video.webm' | head -n 1 || true)"
             mobile_video="$(find "$ARTIFACT_DIR/playwright-output" -path '*mobile*/video.webm' | head -n 1 || true)"
+          fi
 
+          if [ -n "${desktop_video:-}" ] && [ -f "$desktop_video" ]; then
+            cp "$desktop_video" "$INLINE_DIR/desktop-video.webm"
+          fi
+
+          if [ -n "${mobile_video:-}" ] && [ -f "$mobile_video" ]; then
+            cp "$mobile_video" "$INLINE_DIR/mobile-video.webm"
+          fi
+
+          if command -v ffmpeg >/dev/null 2>&1; then
             if [ -n "${desktop_video:-}" ] && [ -f "$desktop_video" ]; then
-              cp "$desktop_video" "$INLINE_DIR/desktop-video.webm"
               ffmpeg -y -t 8 -i "$desktop_video" -vf "fps=6,scale=480:-1:flags=lanczos" -loop 0 "$INLINE_DIR/desktop-preview.gif" >/dev/null 2>&1 || true
             fi
 
             if [ -n "${mobile_video:-}" ] && [ -f "$mobile_video" ]; then
-              cp "$mobile_video" "$INLINE_DIR/mobile-video.webm"
               ffmpeg -y -t 8 -i "$mobile_video" -vf "fps=6,scale=360:-1:flags=lanczos" -loop 0 "$INLINE_DIR/mobile-preview.gif" >/dev/null 2>&1 || true
             fi
           fi
