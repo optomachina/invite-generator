@@ -8,7 +8,7 @@
     "start": "next start -p 3001",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "evidence:install": "playwright install chromium webkit",
+    "evidence:install": "playwright install --with-deps chromium webkit",
     "evidence:capture": "playwright test tests/evidence/home.capture.ts"
   },
   "dependencies": {

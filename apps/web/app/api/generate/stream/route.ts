@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { estimateCostUsd } from "@/lib/pricing";
+import { estimateCostUsd, type Settings } from "@/lib/pricing";
 import { buildPrompt, validateIntake, validateSettings } from "@/lib/intake";
 import { logger } from "@/lib/logger";
 
@@ -10,9 +10,183 @@ const VARIANT_COUNT = 3;
 const PER_VARIANT_TIMEOUT_MS = 290_000;
 
 type StreamWriter = (event: string, data: Record<string, unknown>) => void;
+type VariantResult =
+  | {
+      status: "ready";
+      attempt: number;
+      b64_json: string;
+      ms: number;
+      costUsd: number;
+    }
+  | {
+      status: "error";
+      attempt: number;
+      error: string;
+      ms: number;
+    };
 
 function serializeSseEvent(event: string, data: Record<string, unknown>): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+async function generateVariant({
+  attempt,
+  openai,
+  prompt,
+  settings,
+  signal,
+}: {
+  attempt: number;
+  openai: OpenAI;
+  prompt: string;
+  settings: Settings;
+  signal: AbortSignal;
+}): Promise<VariantResult> {
+  const variantStart = Date.now();
+  try {
+    const result = await openai.images.generate(
+      {
+        model: settings.model,
+        prompt,
+        n: 1,
+        size: settings.size,
+        quality: settings.quality,
+      },
+      {
+        signal: AbortSignal.any([AbortSignal.timeout(PER_VARIANT_TIMEOUT_MS), signal]),
+      },
+    );
+
+    const b64_json = result.data?.[0]?.b64_json;
+    if (typeof b64_json !== "string" || b64_json.length === 0) {
+      throw new Error("openai returned no image bytes");
+    }
+
+    return {
+      status: "ready",
+      attempt,
+      b64_json,
+      ms: Date.now() - variantStart,
+      costUsd: estimateCostUsd(settings),
+    };
+  } catch (err) {
+    if (signal.aborted) {
+      throw err;
+    }
+
+    return {
+      status: "error",
+      attempt,
+      error: err instanceof Error ? err.message : String(err),
+      ms: Date.now() - variantStart,
+    };
+  }
+}
+
+async function streamVariantSession({
+  openai,
+  prompt,
+  settings,
+  signal,
+  sessionId,
+  write,
+  close,
+}: {
+  openai: OpenAI;
+  prompt: string;
+  settings: Settings;
+  signal: AbortSignal;
+  sessionId: string;
+  write: StreamWriter;
+  close: () => void;
+}) {
+  const sessionStart = Date.now();
+  let completedCount = 0;
+  let failedCount = 0;
+  let totalCostUsd = 0;
+  let nextIndex = 0;
+
+  const handleVariant = (variant: VariantResult) => {
+    // `index` is assigned when each variant completes, while `attempt` tracks
+    // launch order, so the first-ready card lands on top of the swipe stack.
+    const index = nextIndex++;
+
+    if (variant.status === "ready") {
+      completedCount += 1;
+      totalCostUsd += variant.costUsd;
+
+      logger.info("generate.variant_ready", {
+        sessionId,
+        attempt: variant.attempt,
+        index,
+        ms: variant.ms,
+        costUsd: variant.costUsd,
+        settings,
+      });
+      write("variant_ready", {
+        sessionId,
+        index,
+        ms: variant.ms,
+        costUsd: variant.costUsd,
+        b64_json: variant.b64_json,
+      });
+      return;
+    }
+
+    failedCount += 1;
+    logger.error("generate.variant_failed", {
+      sessionId,
+      attempt: variant.attempt,
+      index,
+      ms: variant.ms,
+      settings,
+      err: variant.error,
+    });
+    write("variant_failed", {
+      sessionId,
+      index,
+      ms: variant.ms,
+      error: variant.error,
+    });
+  };
+
+  const tasks = Array.from({ length: VARIANT_COUNT }, (_, attempt) =>
+    generateVariant({
+      attempt,
+      openai,
+      prompt,
+      settings,
+      signal,
+    }).then((variant) => {
+      if (signal.aborted) return;
+      handleVariant(variant);
+    }),
+  );
+
+  await Promise.allSettled(tasks);
+  if (signal.aborted) return;
+
+  const totalMs = Date.now() - sessionStart;
+  logger.info("generate.session_cost", {
+    sessionId,
+    variantCount: VARIANT_COUNT,
+    totalMs,
+    totalCostUsd,
+    completedCount,
+    failedCount,
+  });
+  write("session_cost", {
+    sessionId,
+    variantCount: VARIANT_COUNT,
+    totalMs,
+    totalCostUsd,
+    completedCount,
+    failedCount,
+    prompt,
+    settings,
+  });
+  write("done", { sessionId });
+  close();
 }
 
 export async function POST(req: Request) {
@@ -77,7 +251,6 @@ export async function POST(req: Request) {
     new ReadableStream({
       start(controller) {
         let closed = false;
-        let nextIndex = 0;
 
         const write: StreamWriter = (event, data) => {
           if (closed || req.signal.aborted) return;
@@ -101,98 +274,15 @@ export async function POST(req: Request) {
 
         req.signal.addEventListener("abort", onAbort, { once: true });
 
-        void (async () => {
-          const sessionStart = Date.now();
-          let completedCount = 0;
-          let failedCount = 0;
-          let totalCostUsd = 0;
-
-          const tasks = Array.from({ length: VARIANT_COUNT }, (_, attempt) =>
-            (async () => {
-              const variantStart = Date.now();
-              try {
-                const result = await openai.images.generate(
-                  {
-                    model: singleVariantSettings.model,
-                    prompt,
-                    n: 1,
-                    size: singleVariantSettings.size,
-                    quality: singleVariantSettings.quality,
-                  },
-                  {
-                    signal: AbortSignal.any([
-                      AbortSignal.timeout(PER_VARIANT_TIMEOUT_MS),
-                      req.signal,
-                    ]),
-                  },
-                );
-
-                const b64_json = result.data?.[0]?.b64_json;
-                if (typeof b64_json !== "string" || b64_json.length === 0) {
-                  throw new Error("openai returned no image bytes");
-                }
-
-                const index = nextIndex++;
-                const ms = Date.now() - variantStart;
-                const costUsd = estimateCostUsd(singleVariantSettings);
-                completedCount += 1;
-                totalCostUsd += costUsd;
-
-                logger.info("generate.variant_ready", {
-                  sessionId,
-                  attempt,
-                  index,
-                  ms,
-                  costUsd,
-                  settings: singleVariantSettings,
-                });
-                write("variant_ready", { sessionId, index, ms, costUsd, b64_json });
-              } catch (err) {
-                if (req.signal.aborted) return;
-
-                const index = nextIndex++;
-                const ms = Date.now() - variantStart;
-                const detail = err instanceof Error ? err.message : String(err);
-                failedCount += 1;
-
-                logger.error("generate.variant_failed", {
-                  sessionId,
-                  attempt,
-                  index,
-                  ms,
-                  settings: singleVariantSettings,
-                  err,
-                });
-                write("variant_failed", { sessionId, index, ms, error: detail });
-              }
-            })(),
-          );
-
-          await Promise.allSettled(tasks);
-          if (req.signal.aborted) return;
-
-          const totalMs = Date.now() - sessionStart;
-          logger.info("generate.session_cost", {
-            sessionId,
-            variantCount: VARIANT_COUNT,
-            totalMs,
-            totalCostUsd,
-            completedCount,
-            failedCount,
-          });
-          write("session_cost", {
-            sessionId,
-            variantCount: VARIANT_COUNT,
-            totalMs,
-            totalCostUsd,
-            completedCount,
-            failedCount,
-            prompt,
-            settings,
-          });
-          write("done", { sessionId });
-          close();
-        })()
+        void streamVariantSession({
+          openai,
+          prompt,
+          settings: singleVariantSettings,
+          signal: req.signal,
+          sessionId,
+          write,
+          close,
+        })
           .catch((err) => {
             logger.error("generate.stream_failed", { sessionId, err, settings });
             write("fatal", {

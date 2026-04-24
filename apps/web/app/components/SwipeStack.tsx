@@ -16,36 +16,46 @@ const EXIT_X = 420;
 const EXIT_ROTATION = 18;
 const SWIPE_THRESHOLD = 110;
 
-export function SwipeStack({ cards, sessionKey }: SwipeStackProps) {
+export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const [removingById, setRemovingById] = useState<Record<string, SwipeDirection>>({});
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
-  const timeoutIdsRef = useRef<number[]>([]);
+  const timeoutIdsRef = useRef<Array<ReturnType<typeof globalThis.setTimeout>>>([]);
 
   useEffect(() => {
     setDismissedIds([]);
     setRemovingById({});
     setPickedLabel(null);
-    timeoutIdsRef.current.forEach((id) => window.clearTimeout(id));
+    timeoutIdsRef.current.forEach((id) => globalThis.clearTimeout(id));
     timeoutIdsRef.current = [];
   }, [sessionKey]);
 
   useEffect(() => {
     return () => {
-      timeoutIdsRef.current.forEach((id) => window.clearTimeout(id));
+      timeoutIdsRef.current.forEach((id) => globalThis.clearTimeout(id));
     };
   }, []);
 
   const visibleCards = cards.filter((card) => !dismissedIds.includes(card.id));
   const topCard = visibleCards[0];
+  let statusText = "No more cards in this round.";
+  if (topCard?.status === "loading") {
+    statusText = "Next card is still rendering.";
+  } else if (topCard?.status === "error") {
+    statusText = "Skip the failed card to keep reviewing.";
+  } else if (topCard) {
+    statusText = "Swipe left to pass, right to shortlist.";
+  }
 
   function dismiss(card: SwipeCardData, direction: SwipeDirection) {
     if (removingById[card.id]) return;
     if (direction === "right") {
       setPickedLabel(`Concept ${card.index + 1} liked`);
+    } else {
+      setPickedLabel(null);
     }
     setRemovingById((prev) => ({ ...prev, [card.id]: direction }));
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = globalThis.setTimeout(() => {
       setDismissedIds((prev) => prev.concat(card.id));
       setRemovingById((prev) => {
         const next = { ...prev };
@@ -114,15 +124,7 @@ export function SwipeStack({ cards, sessionKey }: SwipeStackProps) {
       </div>
 
       <div className="mt-5 flex min-h-7 items-center justify-between gap-4 text-sm text-ink/65">
-        <span>
-          {topCard
-            ? topCard.status === "loading"
-              ? "Next card is still rendering."
-              : topCard.status === "error"
-                ? "Skip the failed card to keep reviewing."
-                : "Swipe left to pass, right to shortlist."
-            : "No more cards in this round."}
-        </span>
+        <span>{statusText}</span>
         <span className="font-medium text-ink/75">{pickedLabel}</span>
       </div>
     </section>

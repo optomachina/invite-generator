@@ -8,7 +8,7 @@ const taskSlug = process.env.EVIDENCE_TASK || "manual";
 const artifactDir = path.join(repoRoot, ".context", "artifacts", taskSlug);
 const outputDir = path.join(artifactDir, "playwright-output");
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3001";
-const videoMode = process.env.EVIDENCE_VIDEO === "1" ? "on" : "off";
+const videoMode = process.env.EVIDENCE_VIDEO === "1" ? "on" : "retain-on-failure";
 
 export default defineConfig({
   testDir: "./tests",
@@ -49,7 +49,7 @@ export default defineConfig({
   webServer: {
     command: "bun run dev",
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });

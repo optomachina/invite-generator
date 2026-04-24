@@ -234,8 +234,10 @@ export default function Page() {
       if (controller.signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      if (abortRef.current === controller) abortRef.current = null;
-      setLoading(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+      }
     }
   }
 
