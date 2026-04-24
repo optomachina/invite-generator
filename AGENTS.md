@@ -1,0 +1,37 @@
+# Repository Instructions
+
+## Completion Evidence
+
+All completed work must leave reviewable evidence in `.context/artifacts/<task-slug>/`.
+
+Use concise task slugs:
+- `swipe-stack`
+- `checkout-fix`
+- `homepage-polish`
+
+Required for UI-affecting work:
+- Save `desktop-final.png`.
+- Save `mobile-final.png`.
+- If the change affects motion, gestures, animation, drag/drop, scrolling behavior, onboarding, auth, checkout, or any multi-step interaction, also save video evidence.
+
+Required for dynamic or multi-step flows:
+- Save at least one video artifact under `.context/artifacts/<task-slug>/playwright-output/`.
+- Prefer a short flow video over a long unstructured recording.
+
+Required for flaky or failing browser flows:
+- Keep Playwright traces on retry/failure.
+- Do not claim full verification without either passing assertions or a clear explanation of what blocked them.
+
+Verification rules:
+- Screenshots are proof of final visible state, not a substitute for assertions.
+- Video is proof of interaction or motion, not a substitute for assertions.
+- Capture evidence only after the relevant checks pass.
+- Use stable test data and deterministic paths where possible.
+
+Final response requirements:
+- List the artifact paths you created.
+- State what each artifact proves.
+- If evidence was not captured, say exactly why.
+
+Preferred workflow:
+- For the web app, use `apps/web` Playwright evidence capture commands documented in `docs/evidence-capture.md`.

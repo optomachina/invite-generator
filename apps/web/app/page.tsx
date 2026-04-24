@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { SwipeStack } from "@/app/components/SwipeStack";
+import type { SwipeCardData } from "@/app/components/swipe-types";
+import { b64ToObjectUrl } from "@/lib/image";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
+import type { Intake } from "@/lib/intake";
 
-type Intake = {
-  honoree: string;
+type FormIntake = Omit<Intake, "age"> & {
   age: number | "";
-  event: string;
-  date: string;
-  time: string;
-  location: string;
-  vibe: string;
 };
 
-const DEFAULT_INTAKE: Intake = {
+const DEFAULT_INTAKE: FormIntake = {
   honoree: "Lily",
   age: 5,
   event: "birthday party",
@@ -23,31 +21,79 @@ const DEFAULT_INTAKE: Intake = {
   vibe: "garden tea-party, soft pastels, illustrated florals, hand-drawn feel",
 };
 
-type GenResponse = {
-  images: { b64_json?: string }[];
-  prompt: string;
-  ms: number;
-  costUsd: number;
-  settings: Settings;
-};
-
 const MODELS: { id: Model; label: string }[] = [
   { id: "gpt-image-2", label: "gpt-image-2 (preferred)" },
   { id: "gpt-image-1", label: "gpt-image-1 (legacy)" },
 ];
 const QUALITIES: Quality[] = ["low", "medium", "high", "auto"];
 const SIZES: Size[] = ["1024x1536", "1024x1024", "1536x1024", "auto"];
+const VARIANT_COUNT = 3;
 
-function b64ToObjectUrl(b64: string): string {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const blob = new Blob([bytes], { type: "image/png" });
-  return URL.createObjectURL(blob);
-}
+type StreamEvent =
+  | {
+      event: "variant_ready";
+      data: { index: number; b64_json: string; ms: number; costUsd: number };
+    }
+  | {
+      event: "variant_failed";
+      data: { index: number; error: string; ms: number };
+    }
+  | {
+      event: "session_cost";
+      data: {
+        sessionId: string;
+        variantCount: number;
+        totalMs: number;
+        totalCostUsd: number;
+        completedCount: number;
+        failedCount: number;
+        prompt: string;
+        settings: Settings;
+      };
+    }
+  | {
+      event: "fatal";
+      data: { error: string };
+    }
+  | {
+      event: "done";
+      data: { sessionId: string };
+    };
+
+type SessionSummary = Extract<StreamEvent, { event: "session_cost" }>["data"];
 
 function fmtUsd(n: number): string {
   return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(3)}`;
+}
+
+function createLoadingCards(): SwipeCardData[] {
+  return Array.from({ length: VARIANT_COUNT }, (_, index) => ({
+    id: `slot-${index}`,
+    index,
+    status: "loading",
+  }));
+}
+
+function parseSseEvent(raw: string): StreamEvent | null {
+  const lines = raw.split(/\r?\n/);
+  let event = "";
+  const dataLines: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+  }
+
+  if (!event || dataLines.length === 0) return null;
+
+  try {
+    return {
+      event: event as StreamEvent["event"],
+      data: JSON.parse(dataLines.join("\n")) as StreamEvent["data"],
+    } as StreamEvent;
+  } catch {
+    return null;
+  }
 }
 
 export default function Page() {
@@ -55,50 +101,140 @@ export default function Page() {
     model: "gpt-image-2",
     quality: "low",
     size: "1024x1536",
-    n: 1,
+    n: VARIANT_COUNT,
   });
-  const [intake, setIntake] = useState<Intake>(DEFAULT_INTAKE);
+  const [intake, setIntake] = useState<FormIntake>(DEFAULT_INTAKE);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<GenResponse | null>(null);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [cards, setCards] = useState<SwipeCardData[]>([]);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionKey, setSessionKey] = useState(0);
+  const objectUrlsRef = useRef<string[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const estCost = useMemo(() => estimateCostUsd(settings), [settings]);
+  const readyCount = cards.filter((card) => card.status === "ready").length;
+  const failedCount = cards.filter((card) => card.status === "error").length;
 
   useEffect(() => {
-    if (!result) return;
-    const urls = result.images
-      .map((img) => (img.b64_json ? b64ToObjectUrl(img.b64_json) : ""))
-      .filter(Boolean);
-    setImageUrls(urls);
     return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u));
+      abortRef.current?.abort();
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [result]);
+  }, []);
+
+  async function readStream(stream: ReadableStream<Uint8Array>) {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary !== -1) {
+        const chunk = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const parsed = parseSseEvent(chunk);
+        if (parsed) handleStreamEvent(parsed);
+        boundary = buffer.indexOf("\n\n");
+      }
+    }
+
+    buffer += decoder.decode();
+    const parsed = parseSseEvent(buffer.trim());
+    if (parsed) handleStreamEvent(parsed);
+  }
+
+  function handleStreamEvent(message: StreamEvent) {
+    switch (message.event) {
+      case "variant_ready": {
+        const imageUrl = b64ToObjectUrl(message.data.b64_json);
+        objectUrlsRef.current.push(imageUrl);
+        setCards((prev) =>
+          prev.map((card) =>
+            card.index === message.data.index
+              ? {
+                  ...card,
+                  status: "ready",
+                  imageUrl,
+                  ms: message.data.ms,
+                  costUsd: message.data.costUsd,
+                  error: undefined,
+                }
+              : card,
+          ),
+        );
+        return;
+      }
+      case "variant_failed":
+        setCards((prev) =>
+          prev.map((card) =>
+            card.index === message.data.index
+              ? {
+                  ...card,
+                  status: "error",
+                  error: message.data.error,
+                  ms: message.data.ms,
+                }
+              : card,
+          ),
+        );
+        return;
+      case "session_cost":
+        setSessionSummary(message.data);
+        if (message.data.completedCount === 0) {
+          setError("All three variants failed. Review the cards below, then try another run.");
+        }
+        return;
+      case "fatal":
+        setError(message.data.error);
+        return;
+      case "done":
+        setLoading(false);
+        return;
+    }
+  }
 
   async function generate() {
+    abortRef.current?.abort();
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current = [];
     setLoading(true);
     setError(null);
-    setResult(null);
+    setSessionSummary(null);
+    setCards(createLoadingCards());
+    setSessionKey((prev) => prev + 1);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const payloadIntake = {
         ...intake,
         age: intake.age === "" ? undefined : intake.age,
       };
-      const res = await fetch("/api/generate", {
+      const res = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ intake: payloadIntake, settings }),
+        body: JSON.stringify({ intake: payloadIntake, settings: { ...settings, n: VARIANT_COUNT } }),
+        signal: controller.signal,
       });
       if (!res.ok) {
         const t = await res.text();
         throw new Error(`${res.status}: ${t}`);
       }
-      const json = (await res.json()) as GenResponse;
-      setResult(json);
+      if (!res.body) {
+        throw new Error("stream body missing");
+      }
+      await readStream(res.body);
     } catch (e) {
+      if (controller.signal.aborted) return;
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      if (abortRef.current === controller) abortRef.current = null;
       setLoading(false);
     }
   }
@@ -108,17 +244,19 @@ export default function Page() {
       <header className="mb-8">
         <h1 className="font-serif text-4xl tracking-tight">Invite — slice 0</h1>
         <p className="mt-2 text-sm text-ink/70">
-          Smallest end-to-end test. Editable intake. Configurable model/quality/size/count.
+          Multi-variant streaming prototype with a Tinder-style review stack.
         </p>
       </header>
 
       <section className="mb-8 rounded-lg border border-ink/10 bg-white/40 p-5">
         <h2 className="font-serif text-lg mb-3">Settings</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-4">
           <Field label="Model">
             <select
               value={settings.model}
-              onChange={(e) => setSettings({ ...settings, model: e.target.value as Model })}
+              onChange={(e) =>
+                setSettings({ ...settings, model: e.target.value as Model, n: VARIANT_COUNT })
+              }
               className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
             >
               {MODELS.map((m) => (
@@ -129,7 +267,9 @@ export default function Page() {
           <Field label="Quality">
             <select
               value={settings.quality}
-              onChange={(e) => setSettings({ ...settings, quality: e.target.value as Quality })}
+              onChange={(e) =>
+                setSettings({ ...settings, quality: e.target.value as Quality, n: VARIANT_COUNT })
+              }
               className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
             >
               {QUALITIES.map((q) => (
@@ -140,7 +280,9 @@ export default function Page() {
           <Field label="Size">
             <select
               value={settings.size}
-              onChange={(e) => setSettings({ ...settings, size: e.target.value as Size })}
+              onChange={(e) =>
+                setSettings({ ...settings, size: e.target.value as Size, n: VARIANT_COUNT })
+              }
               className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
             >
               {SIZES.map((s) => (
@@ -148,18 +290,10 @@ export default function Page() {
               ))}
             </select>
           </Field>
-          <Field label="Count">
-            <select
-              value={settings.n}
-              onChange={(e) => setSettings({ ...settings, n: Number(e.target.value) })}
-              className="w-full rounded border border-ink/20 bg-white px-2 py-1.5 text-sm"
-            >
-              {[1, 2, 3, 4].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </Field>
         </div>
+        <p className="mb-4 text-xs uppercase tracking-[0.2em] text-ink/55">
+          Each run launches {VARIANT_COUNT} parallel image generations.
+        </p>
 
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Honoree">
@@ -227,7 +361,7 @@ export default function Page() {
             disabled={loading}
             className="inline-flex items-center rounded-full bg-ochre px-6 py-3 text-white text-sm font-medium tracking-wide hover:bg-ochre/90 disabled:opacity-50"
           >
-            {loading ? "Sketching…" : `Generate ${settings.n} invite${settings.n === 1 ? "" : "s"}`}
+            {loading ? "Streaming…" : `Generate ${VARIANT_COUNT} invite concepts`}
           </button>
           <span className="text-sm text-ink/70">
             est. cost: <strong className="text-ink">{fmtUsd(estCost)}</strong>
@@ -244,35 +378,24 @@ export default function Page() {
         </div>
       )}
 
-      {result && (
+      {cards.length > 0 && (
         <section>
           <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="font-serif text-2xl">
-              {result.images.length} concept{result.images.length === 1 ? "" : "s"}
-            </h2>
+            <h2 className="font-serif text-2xl">Swipe Concepts</h2>
             <div className="flex items-center gap-4 text-xs text-ink/70">
-              <span>{(result.ms / 1000).toFixed(1)}s</span>
-              <span>{fmtUsd(result.costUsd)}</span>
-              <span className="text-ink/50">
-                {result.settings.model} · {result.settings.quality} · {result.settings.size}
-              </span>
+              <span>{readyCount}/{VARIANT_COUNT} ready</span>
+              <span>{failedCount} failed</span>
+              {sessionSummary && <span>{(sessionSummary.totalMs / 1000).toFixed(1)}s</span>}
+              {sessionSummary && <span>{fmtUsd(sessionSummary.totalCostUsd)}</span>}
+              <span className="text-ink/50">{settings.model} · {settings.quality} · {settings.size}</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {imageUrls.map((src, i) => (
-              <div
-                key={i}
-                className="overflow-hidden rounded-md border border-ink/10 bg-white shadow-sm"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt={`Concept ${i + 1}`} className="w-full h-auto" />
-                <div className="p-3 text-xs text-ink/60">Concept {i + 1}</div>
-              </div>
-            ))}
-          </div>
+          <SwipeStack cards={cards} sessionKey={sessionKey} />
           <details className="mt-6">
             <summary className="cursor-pointer text-xs text-ink/60">prompt used</summary>
-            <pre className="mt-2 whitespace-pre-wrap text-xs text-ink/70">{result.prompt}</pre>
+            <pre className="mt-2 whitespace-pre-wrap text-xs text-ink/70">
+              {sessionSummary?.prompt ?? "Prompt will appear when the stream finishes."}
+            </pre>
           </details>
         </section>
       )}

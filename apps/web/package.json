@@ -7,21 +7,25 @@
     "build": "next build",
     "start": "next start -p 3001",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "evidence:install": "playwright install chromium webkit",
+    "evidence:capture": "playwright test tests/evidence/home.capture.ts"
   },
   "dependencies": {
+    "framer-motion": "^12.38.0",
     "next": "^15.5.7",
     "openai": "^4.104.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^22.10.7",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "tailwindcss": "^3.4.17",
-    "postcss": "^8.5.1",
     "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
     "typescript": "5.7.3"
   }
 }
