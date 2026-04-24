@@ -70,4 +70,4 @@ That PR comment is the reviewer-facing location for evidence in GitHub.
 - Traces are kept on first retry, which matches Playwright guidance for useful debugging without recording everything on every passing run.
 - If a task needs custom interaction coverage, add or edit a dedicated Playwright spec instead of overloading the generic capture spec.
 - GitHub artifact URLs require repository access and are intended for reviewers already in the PR.
-- GitHub comments support inline images from URLs. For automated inline previews, this repo publishes PNG and GIF evidence files to a PR-specific branch and references them from the comment.
+- GitHub comments support inline images from URLs. For automated inline previews, this repo publishes PNG and GIF evidence files to a PR-specific branch and references them via branch-hosted raw asset URLs in the comment.

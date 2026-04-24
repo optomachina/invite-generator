@@ -88,7 +88,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          ARTIFACT_DIR="../.context/artifacts/pr-${{ github.event.pull_request.number }}"
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/.context/artifacts/pr-${{ github.event.pull_request.number }}"
           INLINE_DIR="$ARTIFACT_DIR/inline"
           mkdir -p "$INLINE_DIR"
 
@@ -184,25 +184,26 @@ jobs:
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
           git push --force origin "HEAD:${BRANCH}"
 
-          BASE_URL="https://github.com/${REPO}/blob/${BRANCH}"
+          BASE_URL="https://github.com/${REPO}/tree/${BRANCH}"
+          RAW_BASE_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
           echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
           if [ -f desktop-final.png ]; then
-            echo "desktop_png_url=${BASE_URL}/desktop-final.png?raw=true" >> "$GITHUB_OUTPUT"
+            echo "desktop_png_url=${RAW_BASE_URL}/desktop-final.png" >> "$GITHUB_OUTPUT"
           fi
           if [ -f mobile-final.png ]; then
-            echo "mobile_png_url=${BASE_URL}/mobile-final.png?raw=true" >> "$GITHUB_OUTPUT"
+            echo "mobile_png_url=${RAW_BASE_URL}/mobile-final.png" >> "$GITHUB_OUTPUT"
           fi
           if [ -f desktop-preview.gif ]; then
-            echo "desktop_gif_url=${BASE_URL}/desktop-preview.gif?raw=true" >> "$GITHUB_OUTPUT"
+            echo "desktop_gif_url=${RAW_BASE_URL}/desktop-preview.gif" >> "$GITHUB_OUTPUT"
           fi
           if [ -f mobile-preview.gif ]; then
-            echo "mobile_gif_url=${BASE_URL}/mobile-preview.gif?raw=true" >> "$GITHUB_OUTPUT"
+            echo "mobile_gif_url=${RAW_BASE_URL}/mobile-preview.gif" >> "$GITHUB_OUTPUT"
           fi
           if [ -f desktop-video.webm ]; then
-            echo "desktop_video_url=${BASE_URL}/desktop-video.webm?raw=true" >> "$GITHUB_OUTPUT"
+            echo "desktop_video_url=${RAW_BASE_URL}/desktop-video.webm" >> "$GITHUB_OUTPUT"
           fi
           if [ -f mobile-video.webm ]; then
-            echo "mobile_video_url=${BASE_URL}/mobile-video.webm?raw=true" >> "$GITHUB_OUTPUT"
+            echo "mobile_video_url=${RAW_BASE_URL}/mobile-video.webm" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Comment PR with evidence link
