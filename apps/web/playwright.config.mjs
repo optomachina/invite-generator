@@ -12,7 +12,12 @@ const videoMode = process.env.EVIDENCE_VIDEO === "1" ? "on" : "off";
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: /.*\.(spec|capture)\.(ts|tsx)$/,
+  testMatch: [
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.capture.ts",
+    "**/*.capture.tsx",
+  ],
   outputDir,
   fullyParallel: false,
   retries: 1,
