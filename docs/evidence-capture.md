@@ -59,7 +59,11 @@ For pull requests, GitHub Actions also:
 - reruns evidence capture in CI
 - uploads the result as a workflow artifact
 - publishes reviewer-facing evidence files to a dedicated PR evidence branch
-- posts or updates a PR comment with inline screenshot previews, animated motion previews, and artifact links
+- posts or updates a PR comment with inline screenshot previews and artifact links
+
+Inline motion previews are not the default for the generic final-state capture.
+- Only publish inline GIF or video previews when the evidence spec performs a real interaction sequence that reviewers need to see.
+- If the evidence run is just a final-state capture, keep the PR comment to screenshots only.
 
 That PR comment is the reviewer-facing location for evidence in GitHub.
 

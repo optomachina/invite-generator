@@ -72,7 +72,6 @@ jobs:
         continue-on-error: true
         env:
           EVIDENCE_TASK: pr-${{ github.event.pull_request.number }}
-          EVIDENCE_VIDEO: "1"
         run: bun run evidence:capture
 
       - name: Upload PR evidence artifact
@@ -237,12 +236,15 @@ jobs:
         with:
           script: |
             const marker = '<!-- pr-evidence-comment -->';
+            const hasMotionPreview = Boolean(process.env.DESKTOP_GIF_URL || process.env.MOBILE_GIF_URL);
             const body = [
               marker,
               '## PR Evidence',
               '',
               process.env.CAPTURE_OUTCOME === 'success'
-                ? 'Fresh screenshots and motion previews are rendered below.'
+                ? hasMotionPreview
+                  ? 'Fresh screenshots and motion previews are rendered below.'
+                  : 'Fresh screenshots are rendered below.'
                 : 'Evidence capture failed in CI. Check the workflow run for logs.',
               '',
               process.env.DESKTOP_PNG_URL
@@ -262,7 +264,7 @@ jobs:
                 : '',
               `- Artifact: [${process.env.ARTIFACT_NAME}](${process.env.ARTIFACT_URL || process.env.RUN_URL})`,
               `- Workflow run: [View run](${process.env.RUN_URL})`,
-              '- Click the animated previews to open the full video files.',
+              hasMotionPreview ? '- Click the animated previews to open the full video files.' : '',
             ].filter(Boolean).join('\n\n');
 
             const { data: comments } = await github.rest.issues.listComments({
