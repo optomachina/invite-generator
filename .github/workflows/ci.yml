@@ -5,9 +5,6 @@ on:
     branches: [main]
   pull_request:
 
-permissions:
-  contents: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -15,7 +12,10 @@ concurrency:
 jobs:
   web:
     name: web (test / typecheck / build)
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: apps/web
@@ -38,3 +38,293 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  pr-evidence:
+    name: pr evidence
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers and system deps
+        run: bunx playwright install --with-deps chromium webkit
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Capture PR evidence
+        id: capture
+        continue-on-error: true
+        env:
+          EVIDENCE_TASK: pr-${{ github.event.pull_request.number }}
+        run: bun run evidence:capture
+
+      - name: Upload PR evidence artifact
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-evidence-${{ github.event.pull_request.number }}
+          path: .context/artifacts/pr-${{ github.event.pull_request.number }}/
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
+
+      - name: Prepare inline evidence assets
+        id: inline_assets
+        if: always()
+        run: |
+          set -euo pipefail
+          ARTIFACT_DIR="$GITHUB_WORKSPACE/.context/artifacts/pr-${{ github.event.pull_request.number }}"
+          INLINE_DIR="$ARTIFACT_DIR/inline"
+          mkdir -p "$INLINE_DIR"
+          desktop_video=""
+          mobile_video=""
+
+          for image in desktop-final.png mobile-final.png; do
+            if [ -f "$ARTIFACT_DIR/$image" ]; then
+              cp "$ARTIFACT_DIR/$image" "$INLINE_DIR/$image"
+            fi
+          done
+
+          if [ -d "$ARTIFACT_DIR/playwright-output" ]; then
+            desktop_video="$(find "$ARTIFACT_DIR/playwright-output" -path '*desktop*/video.webm' | head -n 1 || true)"
+            mobile_video="$(find "$ARTIFACT_DIR/playwright-output" -path '*mobile*/video.webm' | head -n 1 || true)"
+          fi
+
+          if [ -n "${desktop_video:-}" ] && [ -f "$desktop_video" ]; then
+            cp "$desktop_video" "$INLINE_DIR/desktop-video.webm"
+          fi
+
+          if [ -n "${mobile_video:-}" ] && [ -f "$mobile_video" ]; then
+            cp "$mobile_video" "$INLINE_DIR/mobile-video.webm"
+          fi
+
+          if command -v ffmpeg >/dev/null 2>&1; then
+            if [ -n "${desktop_video:-}" ] && [ -f "$desktop_video" ]; then
+              ffmpeg -y -t 8 -i "$desktop_video" -vf "fps=6,scale=480:-1:flags=lanczos" -loop 0 "$INLINE_DIR/desktop-preview.gif" >/dev/null 2>&1 || true
+            fi
+
+            if [ -n "${mobile_video:-}" ] && [ -f "$mobile_video" ]; then
+              ffmpeg -y -t 8 -i "$mobile_video" -vf "fps=6,scale=360:-1:flags=lanczos" -loop 0 "$INLINE_DIR/mobile-preview.gif" >/dev/null 2>&1 || true
+            fi
+          fi
+
+          if compgen -G "$INLINE_DIR/*" >/dev/null; then
+            echo "has_inline=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_inline=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish inline PR evidence
+        id: publish_inline
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository && steps.inline_assets.outputs.has_inline == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          BRANCH="pr-evidence-pr-${PR_NUMBER}"
+          SRC_DIR="$GITHUB_WORKSPACE/.context/artifacts/pr-${PR_NUMBER}/inline"
+          TMP_DIR="$(mktemp -d)"
+
+          git init "$TMP_DIR"
+          cd "$TMP_DIR"
+          git checkout --orphan "$BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          cp -R "$SRC_DIR/." "$TMP_DIR/"
+          printf '' > .nojekyll
+          desktop_video_markup=""
+          if [ -f desktop-video.webm ]; then
+            desktop_video_markup='
+                  <p>Motion preview</p>
+                  <video src="./desktop-video.webm" controls muted playsinline></video>'
+          fi
+
+          mobile_video_markup=""
+          if [ -f mobile-video.webm ]; then
+            mobile_video_markup='
+                  <p>Motion preview</p>
+                  <video src="./mobile-video.webm" controls muted playsinline></video>'
+          fi
+
+          cat > index.html <<EOF
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>PR Evidence</title>
+              <style>
+                body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 2rem; background: #f6f8fa; color: #1f2328; }
+                main { max-width: 1100px; margin: 0 auto; }
+                section { background: white; border: 1px solid #d0d7de; border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; }
+                img, video { width: 100%; border-radius: 8px; border: 1px solid #d0d7de; background: #fff; }
+                h1, h2 { margin-top: 0; }
+                p { color: #59636e; }
+              </style>
+            </head>
+            <body>
+              <main>
+                <h1>PR Evidence</h1>
+                <section>
+                  <h2>Desktop</h2>
+                  <p>Final screenshot</p>
+                  <img src="./desktop-final.png" alt="Desktop final screenshot" />
+          ${desktop_video_markup}
+                </section>
+                <section>
+                  <h2>Mobile</h2>
+                  <p>Final screenshot</p>
+                  <img src="./mobile-final.png" alt="Mobile final screenshot" />
+          ${mobile_video_markup}
+                </section>
+              </main>
+            </body>
+          </html>
+          EOF
+
+          git add .
+          git commit -m "Update PR ${PR_NUMBER} evidence for ${SHA}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          git push --force origin "HEAD:${BRANCH}"
+
+          BASE_URL="https://github.com/${REPO}/tree/${BRANCH}"
+          RAW_BASE_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
+          echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
+          if [ -f desktop-final.png ]; then
+            echo "desktop_png_url=${RAW_BASE_URL}/desktop-final.png" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f mobile-final.png ]; then
+            echo "mobile_png_url=${RAW_BASE_URL}/mobile-final.png" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f desktop-preview.gif ]; then
+            echo "desktop_gif_url=${RAW_BASE_URL}/desktop-preview.gif" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f mobile-preview.gif ]; then
+            echo "mobile_gif_url=${RAW_BASE_URL}/mobile-preview.gif" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f desktop-video.webm ]; then
+            echo "desktop_video_url=${RAW_BASE_URL}/desktop-video.webm" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -f mobile-video.webm ]; then
+            echo "mobile_video_url=${RAW_BASE_URL}/mobile-video.webm" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment PR with evidence link
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CAPTURE_OUTCOME: ${{ steps.capture.outcome }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          ARTIFACT_NAME: pr-evidence-${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          INLINE_BASE_URL: ${{ steps.publish_inline.outputs.base_url }}
+          DESKTOP_PNG_URL: ${{ steps.publish_inline.outputs.desktop_png_url }}
+          MOBILE_PNG_URL: ${{ steps.publish_inline.outputs.mobile_png_url }}
+          DESKTOP_GIF_URL: ${{ steps.publish_inline.outputs.desktop_gif_url }}
+          MOBILE_GIF_URL: ${{ steps.publish_inline.outputs.mobile_gif_url }}
+          DESKTOP_VIDEO_URL: ${{ steps.publish_inline.outputs.desktop_video_url }}
+          MOBILE_VIDEO_URL: ${{ steps.publish_inline.outputs.mobile_video_url }}
+        with:
+          script: |
+            const marker = '<!-- pr-evidence-comment -->';
+            const hasMotionPreview = Boolean(process.env.DESKTOP_GIF_URL || process.env.MOBILE_GIF_URL);
+            const body = [
+              marker,
+              '## PR Evidence',
+              '',
+              process.env.CAPTURE_OUTCOME === 'success'
+                ? hasMotionPreview
+                  ? 'Fresh screenshots and motion previews are rendered below.'
+                  : 'Fresh screenshots are rendered below.'
+                : 'Evidence capture failed in CI. Check the workflow run for logs.',
+              '',
+              process.env.DESKTOP_PNG_URL
+                ? `### Desktop\n[![Desktop final screenshot](${process.env.DESKTOP_PNG_URL})](${process.env.DESKTOP_PNG_URL})`
+                : '',
+              process.env.DESKTOP_GIF_URL
+                ? `[![Desktop motion preview](${process.env.DESKTOP_GIF_URL})](${process.env.DESKTOP_VIDEO_URL || process.env.ARTIFACT_URL || process.env.RUN_URL})`
+                : '',
+              process.env.MOBILE_PNG_URL
+                ? `### Mobile\n[![Mobile final screenshot](${process.env.MOBILE_PNG_URL})](${process.env.MOBILE_PNG_URL})`
+                : '',
+              process.env.MOBILE_GIF_URL
+                ? `[![Mobile motion preview](${process.env.MOBILE_GIF_URL})](${process.env.MOBILE_VIDEO_URL || process.env.ARTIFACT_URL || process.env.RUN_URL})`
+                : '',
+              process.env.INLINE_BASE_URL
+                ? `- Inline evidence branch: [${process.env.INLINE_BASE_URL}](${process.env.INLINE_BASE_URL})`
+                : '',
+              `- Artifact: [${process.env.ARTIFACT_NAME}](${process.env.ARTIFACT_URL || process.env.RUN_URL})`,
+              `- Workflow run: [View run](${process.env.RUN_URL})`,
+              hasMotionPreview ? '- Click the animated previews to open the full video files.' : '',
+            ].filter(Boolean).join('\n\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail job if evidence capture failed
+        if: steps.capture.outcome == 'failure'
+        run: exit 1
+
+  cleanup-pr-evidence:
+    name: cleanup pr evidence branch
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete PR evidence branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          BRANCH="pr-evidence-pr-${PR_NUMBER}"
+          if git ls-remote --exit-code --heads "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "${BRANCH}" >/dev/null 2>&1; then
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" --delete "${BRANCH}"
+          fi
