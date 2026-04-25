@@ -15,6 +15,7 @@ concurrency:
 jobs:
   web:
     name: web (test / typecheck / build)
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,7 +42,7 @@ jobs:
 
   pr-evidence:
     name: pr evidence
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     needs: web
     runs-on: ubuntu-latest
     permissions:
@@ -153,7 +154,21 @@ jobs:
 
           cp -R "$SRC_DIR/." "$TMP_DIR/"
           printf '' > .nojekyll
-          cat > index.html <<'EOF'
+          desktop_video_markup=""
+          if [ -f desktop-video.webm ]; then
+            desktop_video_markup='
+                  <p>Motion preview</p>
+                  <video src="./desktop-video.webm" controls muted playsinline></video>'
+          fi
+
+          mobile_video_markup=""
+          if [ -f mobile-video.webm ]; then
+            mobile_video_markup='
+                  <p>Motion preview</p>
+                  <video src="./mobile-video.webm" controls muted playsinline></video>'
+          fi
+
+          cat > index.html <<EOF
           <!doctype html>
           <html lang="en">
             <head>
@@ -176,15 +191,13 @@ jobs:
                   <h2>Desktop</h2>
                   <p>Final screenshot</p>
                   <img src="./desktop-final.png" alt="Desktop final screenshot" />
-                  <p>Motion preview</p>
-                  <video src="./desktop-video.webm" controls muted playsinline></video>
+          ${desktop_video_markup}
                 </section>
                 <section>
                   <h2>Mobile</h2>
                   <p>Final screenshot</p>
                   <img src="./mobile-final.png" alt="Mobile final screenshot" />
-                  <p>Motion preview</p>
-                  <video src="./mobile-video.webm" controls muted playsinline></video>
+          ${mobile_video_markup}
                 </section>
               </main>
             </body>
@@ -267,7 +280,7 @@ jobs:
               hasMotionPreview ? '- Click the animated previews to open the full video files.' : '',
             ].filter(Boolean).join('\n\n');
 
-            const { data: comments } = await github.rest.issues.listComments({
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
@@ -297,3 +310,22 @@ jobs:
       - name: Fail job if evidence capture failed
         if: steps.capture.outcome == 'failure'
         run: exit 1
+
+  cleanup-pr-evidence:
+    name: cleanup pr evidence branch
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete PR evidence branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          BRANCH="pr-evidence-pr-${PR_NUMBER}"
+          if git ls-remote --exit-code --heads "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "${BRANCH}" >/dev/null 2>&1; then
+            git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" --delete "${BRANCH}"
+          fi
