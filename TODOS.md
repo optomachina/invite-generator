@@ -6,24 +6,6 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-## Pre-flight
-
-### P1. Verify RTK installation
-
-**What:** Confirm `rtk` is on your PATH and `rtk gain` returns analytics. If missing, install from reachingforthejack/rtk (the Rust Token Killer variant, NOT Rust Type Kit — name collision warning in RTK.md).
-
-**Why:** Your global `~/.claude/RTK.md` says "All other commands are automatically rewritten by the Claude Code hook" — if RTK isn't actually installed, you're missing the 60-90% token savings it claims on dev operations.
-
-**Pros:** Free token savings on every dev session. 2 min check.
-
-**Cons:** None if it's already installed. If not, install involves Rust toolchain.
-
-**Context:** Run `which rtk` and `rtk gain`. If "command not found", install and set up the Claude Code hook per your RTK.md. Delete this TODO when verified.
-
-**Depends on:** Nothing.
-
----
-
 ## v1 (ship-blocking)
 
 ### V1.1. Voice-input feature flag + cost kill-switch
@@ -171,3 +153,21 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 **Context:** v1 ships intake without this. Gather week-3 data first — what do paying users consistently NOT get right on first generation? What do refund requests cite? That signal tells you whether the extraction loop would have caught it. Natural follow-on to the existing `POST /api/v1/events/parse` endpoint: add `POST /api/v1/events/refine` that takes the current parsed state and returns `{ next_question?, confidence, ready_to_generate }`. Loop until `ready_to_generate=true` or user hits "I'm done, generate."
 
 **Depends on:** v1 paid-conversion data. Don't build before week 3.
+
+---
+
+## Done
+
+### ~~P1. Verify RTK installation~~ ✓ 2026-04-26
+
+**~~What:~~** ~~Confirm `rtk` is on your PATH and `rtk gain` returns analytics. If missing, install from reachingforthejack/rtk (the Rust Token Killer variant, NOT Rust Type Kit — name collision warning in RTK.md).~~
+
+**~~Why:~~** ~~Your global `~/.claude/RTK.md` says "All other commands are automatically rewritten by the Claude Code hook" — if RTK isn't actually installed, you're missing the 60-90% token savings it claims on dev operations.~~
+
+**~~Pros:~~** ~~Free token savings on every dev session. 2 min check.~~
+
+**~~Cons:~~** ~~None if it's already installed. If not, install involves Rust toolchain.~~
+
+**~~Context:~~** ~~Run `which rtk` and `rtk gain`. If "command not found", install and set up the Claude Code hook per your RTK.md. Delete this TODO when verified.~~ Verified: rtk 0.35.0 at `/Users/blainewilson/.local/bin/rtk`, 50.2% savings across 1707 commands.
+
+**~~Depends on:~~** ~~Nothing.~~
