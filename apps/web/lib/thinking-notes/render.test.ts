@@ -63,6 +63,27 @@ describe("render", () => {
       ),
     ).toBe("Lily and Lily");
   });
+
+  test("does not interpret $-patterns in user input as substitutions", () => {
+    expect(
+      render(
+        { id: "x", text_template: "Hi {name}", context_requires: ["name"] },
+        { name: "$&" },
+      ),
+    ).toBe("Hi $&");
+    expect(
+      render(
+        { id: "x", text_template: "For {name}", context_requires: ["name"] },
+        { name: "Cash $$ Money" },
+      ),
+    ).toBe("For Cash $$ Money");
+    expect(
+      render(
+        { id: "x", text_template: "{name}'s {event}", context_requires: ["name", "event"] },
+        { name: "$1", event: "$'" },
+      ),
+    ).toBe("$1's $'");
+  });
 });
 
 describe("renderApplicable", () => {

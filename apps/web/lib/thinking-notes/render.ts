@@ -18,9 +18,11 @@ export function templateIsApplicable(
 }
 
 export function render(t: ThinkingNoteTemplate, ctx: ThinkingNoteContext): string {
+  const name = ctx.name?.trim() ?? "";
+  const event = ctx.event?.trim() ?? "";
   return t.text_template
-    .replace(/\{name\}/g, ctx.name?.trim() ?? "")
-    .replace(/\{event\}/g, ctx.event?.trim() ?? "");
+    .replaceAll("{name}", () => name)
+    .replaceAll("{event}", () => event);
 }
 
 export function renderApplicable(
