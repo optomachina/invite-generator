@@ -26,19 +26,19 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ## v1 (ship-blocking)
 
-### V1.1. Voice-input feature flag + cost kill-switch
+### V1.1. Voice-input feature flag + cost kill-switch — DONE (lean MVP)
 
-**What:** From day one, wrap the `/api/v1/transcribe` endpoint behind a PostHog feature flag that can be toggled without a deploy. Add a cost kill-switch: if transcribe spend exceeds $50 in a rolling 24h window (tracked via a Postgres `transcribe_usage` table with hourly aggregation), auto-disable voice for all sessions and fire a Sentry alert. When disabled, the intake UI silently reverts to text-only.
+**Shipped:** Lean MVP of the gate. PostHog/Postgres/Sentry deferred until those vendors are picked at the project level — the gate works without them and can be swapped in cleanly.
 
-**Why:** Codex outside voice flagged during /plan-eng-review 2026-04-22 that voice is a new abuse surface and the initial defense layer (Turnstile + 60s cap + per-session rate limit) lacks a cost-based circuit breaker. For a pre-validation product with no revenue covering abuse, a silent $500 OpenAI bill from a targeted abuse campaign is a much larger pain than a 2-line check in the request handler.
+- `apps/web/lib/voice-gate.ts` — env-var flag `VOICE_ENABLED` + rolling 24h spend ceiling (`VOICE_COST_WARN_USD`, default 40; `VOICE_COST_KILL_USD`, default 50). Pluggable `UsageStore` interface; in-memory implementation ships now, swap to Upstash Redis or Postgres before voice goes to scale (Vercel serverless = multi-instance, in-memory only protects a single hot instance).
+- `apps/web/app/api/v1/transcribe/route.ts` — stub. 503 `voice_disabled` when gated, 501 `not_implemented` when enabled. Real transcription is a future TODO.
+- `apps/web/app/api/v1/voice-status/route.ts` + `apps/web/app/hooks/useVoiceEnabled.ts` — UI fallback path: hook returns `enabled=false` whenever the gate is closed, so future voice UI silently reverts to text-only.
+- Budget crossings emit Sentry-shaped warn/error logs (`voice.budget.warn`, `voice.budget.killed`) ready to be promoted to alerts when `@sentry/nextjs` lands.
 
-**Pros:** Trivial to add while building the endpoint. Saves you in the long-tail abuse scenario where Turnstile is bypassed. Lets you kill voice instantly if anything goes wrong without a deploy. Cost kill-switches are standard operational hygiene.
-
-**Cons:** Adds one env var, one PostHog flag, one Postgres table, one Sentry alert rule. Negligible cost. Slight latency tax on every transcribe request (<5ms for the flag check + the usage counter increment).
-
-**Context:** PostHog is already in the stack (design doc L122). Feature flag reads happen at Edge before the transcribe handler runs. Usage counter is INSERT-only with a daily cleanup job. Sentry alert fires at $40 threshold (warning) and $50 (auto-disable). Manual re-enable via PostHog dashboard after investigation.
-
-**Depends on:** Voice-input feature being built. This TODO gates shipping voice.
+**Follow-ups before voice ships at scale:**
+- Pick a shared `UsageStore` (Upstash Redis is the path of least resistance) so the kill-switch is correct across instances.
+- Wire PostHog so the flag can be flipped without a redeploy.
+- Wire Sentry so `voice.budget.*` warns/errors page someone.
 
 ---
 
