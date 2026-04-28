@@ -24,7 +24,9 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-### V1.2. Thinking-notes template library expansion
+### V1.2. Thinking-notes template library expansion ✅ initial 40 shipped 2026-04-26
+
+**Status:** Initial 40 templates + renderer landed at `apps/web/lib/thinking-notes/{templates,render}.ts` (path moved from `packages/thinking-notes/` since the project is single-app). 20 hand-written + 20 from codex (gpt-5.4 reasoning:high). Loading-expressions reference at `.context/loading-expressions-reference.md` audits against Claude Code spinner verbs — zero overlap. Week-3 expansion to 80 still pending Mrs. W beta feedback.
 
 **What:** Start v1 with 40 canned+interpolated note templates in `packages/thinking-notes/templates.ts`. Expand to 80 templates by week 3 based on Mrs. W's repetition feedback from beta usage. Each template is `{ id: string, text_template: string, context_requires: Array<"name" | "event" | null> }` so the renderer picks only templates where the required context fields are filled.
 
