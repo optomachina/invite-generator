@@ -46,8 +46,8 @@ export function pushDismissed(
 export function popDismissed(
   history: DismissedEntry[],
 ): { history: DismissedEntry[]; popped: DismissedEntry | null } {
-  if (history.length === 0) return { history, popped: null };
-  const popped = history[history.length - 1];
+  const popped = history.at(-1);
+  if (!popped) return { history, popped: null };
   return { history: history.slice(0, -1), popped };
 }
 

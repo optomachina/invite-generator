@@ -126,6 +126,23 @@ export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
               ? { x: dragX, rotate: dragRotate, opacity: dragOpacity, zIndex: 10 - depth }
               : { zIndex: 10 - depth };
 
+            let animateTo: Record<string, number> | undefined;
+            if (isRemoving) {
+              animateTo = {
+                x: isRemoving === "right" ? EXIT_X : -EXIT_X,
+                rotate: isRemoving === "right" ? EXIT_ROTATION : -EXIT_ROTATION,
+                opacity: 0,
+              };
+            } else if (!canSwipe) {
+              animateTo = {
+                x: 0,
+                y: depth * 14,
+                scale: 1 - depth * 0.035,
+                rotate: depth * -0.8,
+                opacity: 1 - depth * 0.08,
+              };
+            }
+
             return (
               <motion.div
                 key={card.id}
@@ -138,23 +155,7 @@ export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
                   const direction = shouldCommit(info.offset.x, info.velocity.x);
                   if (direction) dismiss(card, direction);
                 }}
-                animate={
-                  isRemoving
-                    ? {
-                        x: isRemoving === "right" ? EXIT_X : -EXIT_X,
-                        rotate: isRemoving === "right" ? EXIT_ROTATION : -EXIT_ROTATION,
-                        opacity: 0,
-                      }
-                    : canSwipe
-                      ? undefined
-                      : {
-                          x: 0,
-                          y: depth * 14,
-                          scale: 1 - depth * 0.035,
-                          rotate: depth * -0.8,
-                          opacity: 1 - depth * 0.08,
-                        }
-                }
+                animate={animateTo}
                 transition={{ type: "spring", stiffness: 280, damping: 28 }}
                 className="absolute inset-0 touch-pan-y"
                 style={motionStyle}
@@ -223,29 +224,33 @@ type ProgressDotsProps = { total: number; swiped: number };
 
 function ProgressDots({ total, swiped }: Readonly<ProgressDotsProps>) {
   if (total <= 0) return null;
+  const dots = Array.from({ length: total }, (_, i) => `dot-${i}-of-${total}`);
   return (
-    <div
-      role="progressbar"
-      aria-valuenow={swiped}
-      aria-valuemin={0}
-      aria-valuemax={total}
-      aria-label="Swipe progress"
-      className="mb-4 flex items-center justify-center gap-2"
-    >
-      {Array.from({ length: total }).map((_, i) => {
-        const active = i === swiped;
-        const done = i < swiped;
-        const baseClass = "h-2 rounded-full transition-all duration-300";
-        let stateClass: string;
-        if (active) {
-          stateClass = "w-6 bg-ink/80";
-        } else if (done) {
-          stateClass = "w-2 bg-ink/50";
-        } else {
-          stateClass = "w-2 bg-ink/15";
-        }
-        return <span key={i} className={`${baseClass} ${stateClass}`} />;
-      })}
+    <div className="mb-4 flex items-center justify-center">
+      <progress
+        value={swiped}
+        max={total}
+        aria-label="Swipe progress"
+        className="sr-only"
+      >
+        {swiped} of {total}
+      </progress>
+      <div aria-hidden className="flex items-center gap-2">
+        {dots.map((dotKey, i) => {
+          const active = i === swiped;
+          const done = i < swiped;
+          const baseClass = "h-2 rounded-full transition-all duration-300";
+          let stateClass: string;
+          if (active) {
+            stateClass = "w-6 bg-ink/80";
+          } else if (done) {
+            stateClass = "w-2 bg-ink/50";
+          } else {
+            stateClass = "w-2 bg-ink/15";
+          }
+          return <span key={dotKey} className={`${baseClass} ${stateClass}`} />;
+        })}
+      </div>
     </div>
   );
 }
