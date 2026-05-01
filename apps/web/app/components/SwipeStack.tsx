@@ -40,7 +40,7 @@ export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
   const topCard = visibleCards[0];
   let statusText = "No more cards in this round.";
   if (topCard?.status === "loading") {
-    statusText = "Next card is still rendering.";
+    statusText = "";
   } else if (topCard?.status === "error") {
     statusText = "Skip the failed card to keep reviewing.";
   } else if (topCard) {

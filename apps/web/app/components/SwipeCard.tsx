@@ -90,11 +90,6 @@ export function SwipeCard({
       <div className="relative flex-1 overflow-hidden bg-[#f1e7d6]">
         {media}
 
-        {isTop && card.status === "loading" && (
-          <div className="absolute inset-x-5 bottom-5 rounded-full border border-white/50 bg-white/70 px-4 py-2 text-center text-xs font-medium tracking-[0.16em] text-ink/70 backdrop-blur">
-            generating your next card
-          </div>
-        )}
         {isTop && canSwipe && (
           <div className="absolute inset-x-5 top-5 flex justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-white/90">
             <span className="rounded-full border border-white/35 bg-black/15 px-3 py-1 backdrop-blur">

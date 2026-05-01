@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { GeneratingStatus } from "@/app/components/GeneratingStatus";
 import { IntakeHybrid } from "@/app/components/IntakeHybrid";
 import { SwipeStack } from "@/app/components/SwipeStack";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 import { b64ToObjectUrl } from "@/lib/image";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
 import type { Intake } from "@/lib/intake";
+import { buildCanonicalStatus } from "@/lib/thinking-notes/status";
 
 type FormIntake = Omit<Intake, "age"> & {
   age: number | "";
@@ -118,6 +120,17 @@ export default function Page() {
   const estCost = useMemo(() => estimateCostUsd(settings), [settings]);
   const readyCount = cards.filter((card) => card.status === "ready").length;
   const failedCount = cards.filter((card) => card.status === "error").length;
+  const loadingCount = cards.filter((card) => card.status === "loading").length;
+  const canonicalStatus = useMemo(
+    () =>
+      buildCanonicalStatus({
+        honoree: intake.honoree,
+        event: intake.event,
+        age: intake.age === "" ? undefined : intake.age,
+        variantCount: VARIANT_COUNT,
+      }),
+    [intake.honoree, intake.event, intake.age],
+  );
 
   useEffect(() => {
     return () => {
@@ -414,6 +427,13 @@ export default function Page() {
 
       {cards.length > 0 && (
         <section>
+          <GeneratingStatus
+            active={loading && loadingCount > 0}
+            status={canonicalStatus}
+            honoree={intake.honoree}
+            event={intake.event}
+            sessionKey={sessionKey}
+          />
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-serif text-2xl">Swipe Concepts</h2>
             <div className="flex items-center gap-4 text-xs text-ink/70">
