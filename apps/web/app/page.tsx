@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GeneratingStatus } from "@/app/components/GeneratingStatus";
+import { IntakeHybrid } from "@/app/components/IntakeHybrid";
 import { SwipeStack } from "@/app/components/SwipeStack";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 import { b64ToObjectUrl } from "@/lib/image";
@@ -106,6 +107,8 @@ export default function Page() {
     n: VARIANT_COUNT,
   });
   const [intake, setIntake] = useState<FormIntake>(DEFAULT_INTAKE);
+  const [hybridText, setHybridText] = useState("");
+  const [showFields, setShowFields] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cards, setCards] = useState<SwipeCardData[]>([]);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
@@ -225,8 +228,22 @@ export default function Page() {
     abortRef.current = controller;
 
     try {
+      const trimmedHybrid = hybridText.trim();
+      const trimmedVibe = intake.vibe.trim();
+      // Treat the prefilled DEFAULT vibe as empty so a hybrid-only submission
+      // doesn't drag the demo placeholder into the prompt.
+      const vibeIsUserSupplied = trimmedVibe.length > 0 && trimmedVibe !== DEFAULT_INTAKE.vibe.trim();
+      let mergedVibe: string;
+      if (!trimmedHybrid) {
+        mergedVibe = intake.vibe;
+      } else if (vibeIsUserSupplied) {
+        mergedVibe = `${trimmedHybrid} — ${trimmedVibe}`;
+      } else {
+        mergedVibe = trimmedHybrid;
+      }
       const payloadIntake = {
         ...intake,
+        vibe: mergedVibe,
         age: intake.age === "" ? undefined : intake.age,
       };
       const res = await fetch("/api/generate/stream", {
@@ -310,7 +327,25 @@ export default function Page() {
           Each run launches {VARIANT_COUNT} parallel image generations.
         </p>
 
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="mb-4">
+          <h3 className="font-serif text-base mb-2">Tell us about the event</h3>
+          <IntakeHybrid value={hybridText} onChange={setHybridText} />
+        </div>
+
+        <div className="mb-3">
+          <button
+            type="button"
+            onClick={() => setShowFields((v) => !v)}
+            className="text-xs uppercase tracking-[0.18em] text-ink/55 hover:text-ink"
+            aria-expanded={showFields}
+          >
+            {showFields ? "Hide fields" : "Or use fields"}
+          </button>
+        </div>
+
+        <div
+          className={`mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3 ${showFields ? "" : "hidden"}`}
+        >
           <Field label="Honoree">
             <input
               value={intake.honoree}
