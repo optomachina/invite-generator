@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SwipeStack } from "@/app/components/SwipeStack";
+import { SwipeStack, type SwipeRoundResult } from "@/app/components/SwipeStack";
 import type { SwipeCardData } from "@/app/components/swipe-types";
+import { RoundCompletePanel } from "@/app/components/RoundCompletePanel";
+import { ComparePayScreen } from "@/app/components/ComparePayScreen";
+import type { ComparePayFields } from "@/app/components/EditTextForm";
 import { b64ToObjectUrl } from "@/lib/image";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
 import type { Intake } from "@/lib/intake";
@@ -109,6 +112,9 @@ export default function Page() {
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionKey, setSessionKey] = useState(0);
+  const [roundResult, setRoundResult] = useState<SwipeRoundResult | null>(null);
+  const [phase, setPhase] = useState<"swipe" | "round-complete" | "compare-pay" | "paid-stub">("swipe");
+  const [paidWinnerId, setPaidWinnerId] = useState<string | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -207,6 +213,9 @@ export default function Page() {
     setSessionSummary(null);
     setCards(createLoadingCards());
     setSessionKey((prev) => prev + 1);
+    setRoundResult(null);
+    setPhase("swipe");
+    setPaidWinnerId(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -380,7 +389,7 @@ export default function Page() {
         </div>
       )}
 
-      {cards.length > 0 && (
+      {cards.length > 0 && phase === "swipe" && (
         <section>
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-serif text-2xl">Swipe Concepts</h2>
@@ -392,13 +401,89 @@ export default function Page() {
               <span className="text-ink/50">{settings.model} · {settings.quality} · {settings.size}</span>
             </div>
           </div>
-          <SwipeStack cards={cards} sessionKey={sessionKey} />
+          <SwipeStack
+            cards={cards}
+            sessionKey={sessionKey}
+            onRoundComplete={(result) => {
+              setRoundResult(result);
+              setPhase("round-complete");
+            }}
+          />
           <details className="mt-6">
             <summary className="cursor-pointer text-xs text-ink/60">prompt used</summary>
             <pre className="mt-2 whitespace-pre-wrap text-xs text-ink/70">
               {sessionSummary?.prompt ?? "Prompt will appear when the stream finishes."}
             </pre>
           </details>
+        </section>
+      )}
+
+      {phase === "round-complete" && roundResult && (
+        <section className="space-y-4">
+          <RoundCompletePanel
+            result={roundResult}
+            onStartOver={() => {
+              setRoundResult(null);
+              setPhase("swipe");
+              setCards([]);
+              setSessionSummary(null);
+            }}
+            onGenerateMore={() => {
+              void generate();
+            }}
+          />
+          {roundResult.kept.some((c) => c.status === "ready") && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPhase("compare-pay")}
+                className="rounded-full bg-ochre px-5 py-2.5 text-sm font-medium text-cream shadow-sm transition hover:bg-ochre/90"
+              >
+                Continue to checkout →
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {phase === "compare-pay" && roundResult && (
+        <ComparePayScreen
+          kept={roundResult.kept.filter((c) => c.status === "ready")}
+          initialFields={{
+            honoree: intake.honoree,
+            event: intake.event,
+            date: intake.date,
+            time: intake.time,
+            location: intake.location,
+            customLine: "",
+          }}
+          onBack={() => setPhase("round-complete")}
+          onPay={(winner) => {
+            setPaidWinnerId(winner.id);
+            setPhase("paid-stub");
+          }}
+        />
+      )}
+
+      {phase === "paid-stub" && (
+        <section className="rounded-[2rem] border border-ink/10 bg-[#fffaf2] p-6 text-center shadow-[0_24px_80px_rgba(68,40,16,0.14)] sm:p-8">
+          <h2 className="font-serif text-3xl text-ink">Checkout flow coming soon</h2>
+          <p className="mt-2 text-sm text-ink/70">
+            We captured concept <span className="font-medium">{paidWinnerId}</span> as your pick. Real payment + share page is the next ship.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setPaidWinnerId(null);
+              setRoundResult(null);
+              setPhase("swipe");
+              setCards([]);
+              setSessionSummary(null);
+            }}
+            className="mt-6 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-ink/90"
+          >
+            Start a new round
+          </button>
         </section>
       )}
     </main>

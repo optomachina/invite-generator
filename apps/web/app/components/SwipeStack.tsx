@@ -5,9 +5,15 @@ import { motion, useMotionValue, useTransform } from "framer-motion";
 import { SwipeCard } from "@/app/components/SwipeCard";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 
+export type SwipeRoundResult = {
+  kept: SwipeCardData[];
+  passed: SwipeCardData[];
+};
+
 type SwipeStackProps = {
   cards: SwipeCardData[];
   sessionKey: number;
+  onRoundComplete?: (result: SwipeRoundResult) => void;
 };
 
 type SwipeDirection = "left" | "right";
@@ -23,7 +29,7 @@ const SWIPE_OFFSET_THRESHOLD = 80;
 const SWIPE_VELOCITY_THRESHOLD = 500;
 const STAMP_REVEAL = 60;
 
-export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
+export function SwipeStack({ cards, sessionKey, onRoundComplete }: Readonly<SwipeStackProps>) {
   const [dismissedHistory, setDismissedHistory] = useState<DismissedEntry[]>([]);
   const [removingById, setRemovingById] = useState<Record<string, SwipeDirection>>({});
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
@@ -63,6 +69,23 @@ export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
   const topCard = visibleCards[0];
   const totalCards = cards.length;
   const currentIndex = dismissedHistory.length;
+
+  const actionableCards = cards.filter((card) => card.status !== "loading");
+  const everyActionableSwiped =
+    actionableCards.length > 0 &&
+    actionableCards.every((card) => dismissedIds.includes(card.id)) &&
+    Object.keys(removingById).length === 0;
+
+  useEffect(() => {
+    if (!onRoundComplete) return;
+    if (!everyActionableSwiped) return;
+    const directionById = new Map<string, SwipeDirection>(
+      dismissedHistory.map((entry) => [entry.id, entry.direction]),
+    );
+    const kept = cards.filter((card) => directionById.get(card.id) === "right");
+    const passed = cards.filter((card) => directionById.get(card.id) === "left");
+    onRoundComplete({ kept, passed });
+  }, [everyActionableSwiped, cards, dismissedHistory, onRoundComplete]);
 
   let statusText = "No more cards in this round.";
   if (topCard?.status === "loading") {

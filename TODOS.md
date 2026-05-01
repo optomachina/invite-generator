@@ -118,7 +118,23 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 **Context:** Code-overlay typography was locked in v1 during this review. Text becomes data. Rendering with different text strings is a server round-trip (fast). Fields: honoree name, date, time, location, honoree age, custom line. Keep it minimal; any field beyond those 6 is out of scope.
 
-**Depends on:** Code-overlay typography shipping in v1.
+**Depends on:** Code-overlay typography shipping in v1 (see V1.7).
+
+---
+
+### V1.7. Code-overlay text rendering pipeline
+
+**What:** Server-side compositor that takes `(background_image, fields, layout_template) => final_png`. Prompt the model to leave a clean text region in each generated concept, then overlay the user's actual text strings (honoree, event, date, time, location, customLine) using real fonts via `sharp` (or skia-canvas). Pick a small set of layout templates (e.g., bottom-third title block, centered card, top-banner) and a small font set per aesthetic (script, modern serif, sans). Concept generation stores `{ imageUrl, layout: "bottom-third", fontStack: "script" }` so re-renders are deterministic.
+
+**Why:** `gpt-image-2` text generation is ~80% accurate at best — misspells names, garbles dates, fonts shift mid-word. For a paid product ($7 per invite), text correctness is a refund-rate determinant, not a polish item. Code-overlay turns a generated typo into a 2s server re-render with the user's exact strings, in the user's chosen font. Decoded during the post-V1.3 review on 2026-05-01 when we realized the compare/edit form (V1.6) was already wired but had no rendering pipeline behind it. Inpainting via the gpt-image-2 edits API was considered and rejected: ~$0.05 + 5–15s per edit, *and* inpainted text also misspells.
+
+**Pros:** Text always perfect. Edits are free (no API call). Unlocks V1.6 (edit-text form is already in code, just needs the renderer). Removes the #1 refund cause.
+
+**Cons:** ~1–2 days of work: prompt patterning to reserve text regions, font licensing/loading on the server, layout templates, server route, and a small image-composition library dep (likely `sharp` since Next on Vercel already uses it). Loses the "model wrote your name in cursive" magic — text uses standard typography rather than scene-integrated lettering.
+
+**Context:** ComparePayScreen + EditTextForm are already built (PR #14 / 2026-05-01); they capture `{ honoree, event, date, time, location, customLine }` but currently route to a stub. This TODO builds the rendering side. Suggested first cut: 1 layout (bottom-third title block), 2 fonts (script for "elegant" concepts, sans for "modern"), `sharp.composite()` with SVG-rendered text. Validate on real generations before expanding template/font set.
+
+**Depends on:** V1.3 shipped (PR #14). Blocks V1.6 going live.
 
 ---
 
