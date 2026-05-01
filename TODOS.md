@@ -42,7 +42,11 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-### V1.3. Tinder-style L/R swipe gestures (non-optional per Mrs. W)
+### V1.3. Tinder-style L/R swipe gestures (non-optional per Mrs. W) ✅ shipped 2026-04-30 (web)
+
+**Shipped:**
+- `apps/web/lib/swipe.ts` — pure logic: `shouldCommit(offset, velocity)` (80px or 0.5 velocity), `computeTilt`/`computePeekOpacity`/`computeStampOpacity`, `pushDismissed`/`popDismissed` for undo, `progressFraction`. 22 tests.
+- `apps/web/app/components/SwipeStack.tsx` — drag with live tilt (±15° at 160px) + opacity peek (down to 0.6) wired via `useMotionValue`/`useTransform`. Spring snap-back via `dragSnapToOrigin` below threshold. Green KEEP / red PASS stamps fade in with drag. Circular X/heart action buttons + center undo button as non-swiper fallback. 4-dot progress indicator above the stack with `role="progressbar"`. Exit animation: card flies off (480px) with 18° rotation. iOS port deferred until iOS app exists.
 
 **What:** Replace tap-to-choose on the swipe screen with full Tinder-style card-stack physics: drag with tilt+opacity peek, snap-back on weak swipes, decisive L/R commits the keep/discard, undo button, 4-dot progress dots, circular X/heart buttons under the stack as a non-swiper fallback. Both web and iOS.
 

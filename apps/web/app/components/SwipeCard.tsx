@@ -5,7 +5,6 @@ import type { SwipeCardData } from "@/app/components/swipe-types";
 
 type SwipeCardProps = {
   card: SwipeCardData;
-  isTop: boolean;
   canSwipe: boolean;
   canSkip: boolean;
   onSkip: () => void;
@@ -25,7 +24,6 @@ function fmtUsd(n?: number): string {
 
 export function SwipeCard({
   card,
-  isTop,
   canSwipe,
   canSkip,
   onSkip,
@@ -87,20 +85,7 @@ export function SwipeCard({
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-ink/10 bg-[#fffaf2] shadow-[0_24px_80px_rgba(68,40,16,0.14)]">
-      <div className="relative flex-1 overflow-hidden bg-[#f1e7d6]">
-        {media}
-
-        {isTop && canSwipe && (
-          <div className="absolute inset-x-5 top-5 flex justify-between text-[11px] font-semibold uppercase tracking-[0.24em] text-white/90">
-            <span className="rounded-full border border-white/35 bg-black/15 px-3 py-1 backdrop-blur">
-              Swipe left
-            </span>
-            <span className="rounded-full border border-white/35 bg-black/15 px-3 py-1 backdrop-blur">
-              Swipe right
-            </span>
-          </div>
-        )}
-      </div>
+      <div className="relative flex-1 overflow-hidden bg-[#f1e7d6]">{media}</div>
 
       <div className="flex items-center justify-between gap-3 border-t border-ink/10 px-5 py-4">
         <div>
