@@ -74,7 +74,13 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-### V1.5. Generating screen: status copy dedup + thinking-notes voice
+### V1.5. Generating screen: status copy dedup + thinking-notes voice ✅ shipped 2026-04-30
+
+**Shipped:**
+- `apps/web/lib/thinking-notes/status.ts` — pure `buildCanonicalStatus(ctx)`. One canonical phrasing: "Sketching {n} invites for {honoree}'s {event}…" with graceful fallbacks (honoree-only, event-only, bare). Reuses `containsWord` from `lib/intake.ts` to avoid double-prepending the ordinal age.
+- `apps/web/app/components/GeneratingStatus.tsx` — top-of-section status card: canonical line on top, thinking-note rotating beneath it via framer-motion fade. Shuffles applicable templates per session, rotates every 4-6s (`pickIntervalMs`), wraps with `nextNoteIndex`. `aria-live="polite"`.
+- Dedup: removed the redundant per-card "generating your next card" overlay in `SwipeCard.tsx` and the "Next card is still rendering." string in `SwipeStack.tsx`. The canonical status is now the single source of truth during the loading window.
+- Tests: `status.test.ts` (9 cases — singular/plural, ordinal handling, all fallbacks) + `rotate.test.ts` (deterministic shuffle, wrap, interval bounds). 64 tests pass total. Typecheck + build clean.
 
 **What:** Two fixes on the generating screen. (a) Show one status line max — "Sketching… Sketching… Sketching 4 concepts for Lily's first birthday" reads like a stuttering bug. Pick one canonical phrasing and stick with it for the session. (b) Adopt Claude's flip-book thinking-notes voice — small clever notes like "Adding a dash of cake…" / "Picking colors Lily would love" — instead of sterile progress copy. Add jokes and contextual references (honoree name, event type) so it feels like a designer is in the room, not a load bar.
 
