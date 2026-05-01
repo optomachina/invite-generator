@@ -216,11 +216,15 @@ export default function Page() {
 
     try {
       const trimmedHybrid = hybridText.trim();
-      const mergedVibe = trimmedHybrid
-        ? intake.vibe.trim()
-          ? `${trimmedHybrid} — ${intake.vibe.trim()}`
-          : trimmedHybrid
-        : intake.vibe;
+      const trimmedVibe = intake.vibe.trim();
+      let mergedVibe: string;
+      if (!trimmedHybrid) {
+        mergedVibe = intake.vibe;
+      } else if (trimmedVibe) {
+        mergedVibe = `${trimmedHybrid} — ${trimmedVibe}`;
+      } else {
+        mergedVibe = trimmedHybrid;
+      }
       const payloadIntake = {
         ...intake,
         vibe: mergedVibe,

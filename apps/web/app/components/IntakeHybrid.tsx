@@ -29,7 +29,7 @@ type Props = {
   onChange: (v: string) => void;
 };
 
-export function IntakeHybrid({ value, onChange }: Props) {
+export function IntakeHybrid({ value, onChange }: Readonly<Props>) {
   const { enabled: voiceEnabled, loaded: voiceLoaded } = useVoiceEnabled();
   const [recording, setRecording] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export function IntakeHybrid({ value, onChange }: Props) {
 
   function stopAndCleanup() {
     if (tickRef.current !== null) {
-      window.clearInterval(tickRef.current);
+      globalThis.clearInterval(tickRef.current);
       tickRef.current = null;
     }
     const recorder = recorderRef.current;
@@ -75,7 +75,7 @@ export function IntakeHybrid({ value, onChange }: Props) {
       setRecordError("Microphone not supported on this browser.");
       return;
     }
-    if (typeof window === "undefined" || typeof window.MediaRecorder === "undefined") {
+    if (globalThis.MediaRecorder === undefined) {
       setRecordError("Recording not supported on this browser.");
       return;
     }
@@ -93,7 +93,7 @@ export function IntakeHybrid({ value, onChange }: Props) {
         streamRef.current = null;
         recorderRef.current = null;
         if (tickRef.current !== null) {
-          window.clearInterval(tickRef.current);
+          globalThis.clearInterval(tickRef.current);
           tickRef.current = null;
         }
         setRecording(false);
@@ -103,9 +103,9 @@ export function IntakeHybrid({ value, onChange }: Props) {
       recorderRef.current = recorder;
       startedAtRef.current = Date.now();
       setElapsedMs(0);
-      tickRef.current = window.setInterval(() => {
+      tickRef.current = globalThis.setInterval(() => {
         setElapsedMs(Date.now() - startedAtRef.current);
-      }, 100);
+      }, 100) as unknown as number;
       setRecording(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Could not access microphone.";
@@ -177,9 +177,13 @@ export function IntakeHybrid({ value, onChange }: Props) {
   const elapsedSeconds = Math.floor(elapsedMs / 1000);
   const elapsedLabel = `${String(Math.floor(elapsedSeconds / 60)).padStart(1, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
 
+  const micStateClass = getMicStateClass(recording, transcribing);
+  const helperText = getHelperText({ recording, transcribing, showMic, voiceLoaded, elapsedLabel });
+
   return (
     <div>
-      <div className="mb-2 flex flex-wrap gap-2" role="group" aria-label="Event type suggestions">
+      <fieldset className="mb-2 flex flex-wrap gap-2 border-0 p-0">
+        <legend className="sr-only">Event type suggestions</legend>
         {CHIPS.map((chip) => (
           <button
             key={chip.id}
@@ -190,7 +194,7 @@ export function IntakeHybrid({ value, onChange }: Props) {
             {chip.label}
           </button>
         ))}
-      </div>
+      </fieldset>
 
       <div className="relative">
         <textarea
@@ -222,13 +226,7 @@ export function IntakeHybrid({ value, onChange }: Props) {
               if (recording) stopRecording();
             }}
             disabled={transcribing}
-            className={`absolute bottom-2 right-2 flex h-10 w-10 select-none items-center justify-center rounded-full border transition-colors ${
-              recording
-                ? "border-red-500 bg-red-500 text-white"
-                : transcribing
-                  ? "border-ink/20 bg-ink/5 text-ink/40"
-                  : "border-ink/20 bg-white text-ink/70 hover:border-ochre hover:text-ink"
-            }`}
+            className={`absolute bottom-2 right-2 flex h-10 w-10 select-none items-center justify-center rounded-full border transition-colors ${micStateClass}`}
           >
             <MicIcon recording={recording} />
           </button>
@@ -236,24 +234,40 @@ export function IntakeHybrid({ value, onChange }: Props) {
       </div>
 
       <div className="mt-2 flex min-h-[1rem] items-center justify-between text-xs">
-        <span className="text-ink/55">
-          {recording
-            ? `Recording… release to stop · ${elapsedLabel}`
-            : transcribing
-              ? "Transcribing…"
-              : showMic
-                ? "Hold the mic to dictate. Release to stop."
-                : voiceLoaded
-                  ? "Type your event details above."
-                  : ""}
-        </span>
+        <span className="text-ink/55">{helperText}</span>
         {recordError && <span className="text-red-700">{recordError}</span>}
       </div>
     </div>
   );
 }
 
-function MicIcon({ recording }: { recording: boolean }) {
+function getMicStateClass(recording: boolean, transcribing: boolean): string {
+  if (recording) return "border-red-500 bg-red-500 text-white";
+  if (transcribing) return "border-ink/20 bg-ink/5 text-ink/40";
+  return "border-ink/20 bg-white text-ink/70 hover:border-ochre hover:text-ink";
+}
+
+function getHelperText({
+  recording,
+  transcribing,
+  showMic,
+  voiceLoaded,
+  elapsedLabel,
+}: {
+  recording: boolean;
+  transcribing: boolean;
+  showMic: boolean;
+  voiceLoaded: boolean;
+  elapsedLabel: string;
+}): string {
+  if (recording) return `Recording… release to stop · ${elapsedLabel}`;
+  if (transcribing) return "Transcribing…";
+  if (showMic) return "Hold the mic to dictate. Release to stop.";
+  if (voiceLoaded) return "Type your event details above.";
+  return "";
+}
+
+function MicIcon({ recording }: Readonly<{ recording: boolean }>) {
   if (recording) {
     return (
       <span className="block h-3 w-3 rounded-sm bg-white" aria-hidden />
