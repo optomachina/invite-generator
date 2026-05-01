@@ -230,10 +230,13 @@ export default function Page() {
     try {
       const trimmedHybrid = hybridText.trim();
       const trimmedVibe = intake.vibe.trim();
+      // Treat the prefilled DEFAULT vibe as empty so a hybrid-only submission
+      // doesn't drag the demo placeholder into the prompt.
+      const vibeIsUserSupplied = trimmedVibe.length > 0 && trimmedVibe !== DEFAULT_INTAKE.vibe.trim();
       let mergedVibe: string;
       if (!trimmedHybrid) {
         mergedVibe = intake.vibe;
-      } else if (trimmedVibe) {
+      } else if (vibeIsUserSupplied) {
         mergedVibe = `${trimmedHybrid} — ${trimmedVibe}`;
       } else {
         mergedVibe = trimmedHybrid;

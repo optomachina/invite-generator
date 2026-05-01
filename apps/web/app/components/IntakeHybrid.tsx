@@ -42,6 +42,16 @@ export function IntakeHybrid({ value, onChange }: Readonly<Props>) {
   const startedAtRef = useRef<number>(0);
   const tickRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // Mirrors `value` so async transcribe handlers always see the latest text
+  // (closure capture would otherwise clobber edits made during recording).
+  const valueRef = useRef(value);
+  // Tracks whether the user is still holding the mic button. If they release
+  // before getUserMedia resolves, we abort instead of starting a phantom take.
+  const holdActiveRef = useRef(false);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     return () => {
@@ -81,6 +91,11 @@ export function IntakeHybrid({ value, onChange }: Readonly<Props>) {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!holdActiveRef.current) {
+        // User released before the mic permission resolved — bail.
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
       chunksRef.current = [];
@@ -144,7 +159,8 @@ export function IntakeHybrid({ value, onChange }: Readonly<Props>) {
       const data = (await res.json()) as { text?: string };
       const text = (data.text ?? "").trim();
       if (!text) return;
-      const next = value.length === 0 || value.endsWith(" ") ? `${value}${text}` : `${value} ${text}`;
+      const current = valueRef.current;
+      const next = current.length === 0 || current.endsWith(" ") ? `${current}${text}` : `${current} ${text}`;
       onChange(next);
     } catch (err) {
       setRecordError(err instanceof Error ? err.message : "Transcription failed.");
@@ -213,16 +229,20 @@ export function IntakeHybrid({ value, onChange }: Readonly<Props>) {
             aria-pressed={recording}
             onPointerDown={(e) => {
               e.preventDefault();
+              holdActiveRef.current = true;
               void startRecording();
             }}
             onPointerUp={(e) => {
               e.preventDefault();
+              holdActiveRef.current = false;
               stopRecording();
             }}
             onPointerLeave={() => {
+              holdActiveRef.current = false;
               if (recording) stopRecording();
             }}
             onPointerCancel={() => {
+              holdActiveRef.current = false;
               if (recording) stopRecording();
             }}
             disabled={transcribing}
