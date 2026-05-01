@@ -3,9 +3,10 @@ import { nextNoteIndex, pickIntervalMs, pickRotationOrder } from "./rotate";
 
 describe("pickRotationOrder", () => {
   test("returns same set of items", () => {
+    const byNumber = (a: number, b: number) => a - b;
     const input = [1, 2, 3, 4, 5];
     const out = pickRotationOrder(input, () => 0);
-    expect(out.slice().sort()).toEqual(input.slice().sort());
+    expect(out.slice().sort(byNumber)).toEqual(input.slice().sort(byNumber));
   });
 
   test("does not mutate original", () => {
