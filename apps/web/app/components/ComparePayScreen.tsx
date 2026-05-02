@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 import {
   EditTextForm,
@@ -9,7 +9,10 @@ import {
 
 type ComparePayScreenProps = {
   kept: SwipeCardData[];
-  initialFields: ComparePayFields;
+  fields: ComparePayFields;
+  selectedId: string | null;
+  onFieldsChange: (next: ComparePayFields) => void;
+  onSelect: (id: string) => void;
   onBack: () => void;
   onPay: (winner: SwipeCardData, fields: ComparePayFields) => void;
 };
@@ -21,7 +24,7 @@ const usdFormatter = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-function pickInitialId(kept: SwipeCardData[]): string | null {
+export function pickInitialKeptId(kept: SwipeCardData[]): string | null {
   const firstReady = kept.find((c) => c.status === "ready");
   if (firstReady) return firstReady.id;
   return kept[0]?.id ?? null;
@@ -29,15 +32,13 @@ function pickInitialId(kept: SwipeCardData[]): string | null {
 
 export function ComparePayScreen({
   kept,
-  initialFields,
+  fields,
+  selectedId,
+  onFieldsChange,
+  onSelect,
   onBack,
   onPay,
 }: Readonly<ComparePayScreenProps>) {
-  const [fields, setFields] = useState<ComparePayFields>(initialFields);
-  const [selectedId, setSelectedId] = useState<string | null>(() =>
-    pickInitialId(kept),
-  );
-
   const winner = useMemo(
     () => kept.find((c) => c.id === selectedId) ?? null,
     [kept, selectedId],
@@ -90,7 +91,7 @@ export function ComparePayScreen({
               type="button"
               role="radio"
               aria-checked={selected}
-              onClick={() => setSelectedId(card.id)}
+              onClick={() => onSelect(card.id)}
               className={`group flex flex-col overflow-hidden rounded-[1.5rem] border bg-white text-left transition ${baseBorder}`}
             >
               <div className="relative aspect-[5/7] overflow-hidden bg-[#f1e7d6]">
@@ -116,7 +117,7 @@ export function ComparePayScreen({
       </div>
 
       <div className="mt-8">
-        <EditTextForm fields={fields} onChange={setFields} />
+        <EditTextForm fields={fields} onChange={onFieldsChange} />
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-3 border-t border-ink/10 pt-6">

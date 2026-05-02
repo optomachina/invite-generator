@@ -74,6 +74,7 @@ export function SwipeStack({ cards, sessionKey, onRoundComplete }: Readonly<Swip
   const actionableCards = cards.filter((card) => card.status !== "loading");
   const everyActionableSwiped =
     actionableCards.length > 0 &&
+    cards.every((card) => card.status !== "loading") &&
     actionableCards.every((card) => dismissedIds.has(card.id)) &&
     Object.keys(removingById).length === 0;
 

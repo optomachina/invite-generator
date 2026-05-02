@@ -6,7 +6,7 @@ import { IntakeHybrid } from "@/app/components/IntakeHybrid";
 import { SwipeStack, type SwipeRoundResult } from "@/app/components/SwipeStack";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 import { RoundCompletePanel } from "@/app/components/RoundCompletePanel";
-import { ComparePayScreen } from "@/app/components/ComparePayScreen";
+import { ComparePayScreen, pickInitialKeptId } from "@/app/components/ComparePayScreen";
 import type { ComparePayFields } from "@/app/components/EditTextForm";
 import { b64ToObjectUrl } from "@/lib/image";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
@@ -119,7 +119,9 @@ export default function Page() {
   const [sessionKey, setSessionKey] = useState(0);
   const [roundResult, setRoundResult] = useState<SwipeRoundResult | null>(null);
   const [phase, setPhase] = useState<"swipe" | "round-complete" | "compare-pay" | "paid-stub">("swipe");
-  const [paidWinnerId, setPaidWinnerId] = useState<string | null>(null);
+  const [compareSelectedId, setCompareSelectedId] = useState<string | null>(null);
+  const [compareFields, setCompareFields] = useState<ComparePayFields | null>(null);
+  const [paidWinner, setPaidWinner] = useState<{ card: SwipeCardData; fields: ComparePayFields } | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -231,7 +233,9 @@ export default function Page() {
     setSessionKey((prev) => prev + 1);
     setRoundResult(null);
     setPhase("swipe");
-    setPaidWinnerId(null);
+    setCompareSelectedId(null);
+    setCompareFields(null);
+    setPaidWinner(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -479,6 +483,8 @@ export default function Page() {
             result={roundResult}
             onStartOver={() => {
               setRoundResult(null);
+              setCompareSelectedId(null);
+              setCompareFields(null);
               setPhase("swipe");
               setCards([]);
               setSessionSummary(null);
@@ -491,7 +497,23 @@ export default function Page() {
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => setPhase("compare-pay")}
+                onClick={() => {
+                  const readyKept = roundResult.kept.filter((c) => c.status === "ready");
+                  if (compareSelectedId === null) {
+                    setCompareSelectedId(pickInitialKeptId(readyKept));
+                  }
+                  if (compareFields === null) {
+                    setCompareFields({
+                      honoree: intake.honoree,
+                      event: intake.event,
+                      date: intake.date,
+                      time: intake.time,
+                      location: intake.location,
+                      customLine: "",
+                    });
+                  }
+                  setPhase("compare-pay");
+                }}
                 className="rounded-full bg-ochre px-5 py-2.5 text-sm font-medium text-cream shadow-sm transition hover:bg-ochre/90"
               >
                 Continue to checkout →
@@ -501,36 +523,42 @@ export default function Page() {
         </section>
       )}
 
-      {phase === "compare-pay" && roundResult && (
+      {phase === "compare-pay" && roundResult && compareFields && (
         <ComparePayScreen
           kept={roundResult.kept.filter((c) => c.status === "ready")}
-          initialFields={{
-            honoree: intake.honoree,
-            event: intake.event,
-            date: intake.date,
-            time: intake.time,
-            location: intake.location,
-            customLine: "",
-          }}
+          fields={compareFields}
+          selectedId={compareSelectedId}
+          onFieldsChange={setCompareFields}
+          onSelect={setCompareSelectedId}
           onBack={() => setPhase("round-complete")}
-          onPay={(winner) => {
-            setPaidWinnerId(winner.id);
+          onPay={(winner, fields) => {
+            setPaidWinner({ card: winner, fields });
             setPhase("paid-stub");
           }}
         />
       )}
 
-      {phase === "paid-stub" && (
+      {phase === "paid-stub" && paidWinner && (
         <section className="rounded-[2rem] border border-ink/10 bg-[#fffaf2] p-6 text-center shadow-[0_24px_80px_rgba(68,40,16,0.14)] sm:p-8">
           <h2 className="font-serif text-3xl text-ink">Checkout flow coming soon</h2>
           <p className="mt-2 text-sm text-ink/70">
-            We captured concept <span className="font-medium">{paidWinnerId}</span> as your pick. Real payment + share page is the next ship.
+            We captured <span className="font-medium">Concept {paidWinner.card.index + 1}</span>
+            {" "}for {paidWinner.fields.honoree}&apos;s {paidWinner.fields.event}.
+            Real payment + share page is the next ship.
           </p>
+          {paidWinner.card.imageUrl && (
+            <div className="mx-auto mt-4 max-w-xs overflow-hidden rounded-[1.5rem] border border-ink/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={paidWinner.card.imageUrl} alt={`Concept ${paidWinner.card.index + 1}`} className="h-full w-full object-cover" />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => {
-              setPaidWinnerId(null);
+              setPaidWinner(null);
               setRoundResult(null);
+              setCompareSelectedId(null);
+              setCompareFields(null);
               setPhase("swipe");
               setCards([]);
               setSessionSummary(null);
