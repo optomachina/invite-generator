@@ -85,7 +85,7 @@ export function buildPrompt(intake: Intake): string {
 // a RegExp from interpolated input.
 const ALNUM = /[a-z0-9]/i;
 
-function containsWord(haystack: string, needle: string): boolean {
+export function containsWord(haystack: string, needle: string): boolean {
   const h = haystack.toLowerCase();
   const n = needle.toLowerCase();
   let i = h.indexOf(n);

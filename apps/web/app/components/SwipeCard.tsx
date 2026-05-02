@@ -1,17 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion, type MotionValue } from "framer-motion";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 
 type SwipeCardProps = {
   card: SwipeCardData;
-  isTop: boolean;
   canSwipe: boolean;
   canSkip: boolean;
   onSkip: () => void;
-  keepStampOpacity?: MotionValue<number>;
-  passStampOpacity?: MotionValue<number>;
 };
 
 const usdFormatter = new Intl.NumberFormat("en-US", {
@@ -28,12 +24,9 @@ function fmtUsd(n?: number): string {
 
 export function SwipeCard({
   card,
-  isTop,
   canSwipe,
   canSkip,
   onSkip,
-  keepStampOpacity,
-  passStampOpacity,
 }: Readonly<SwipeCardProps>) {
   let media: ReactNode;
   if (card.status === "ready" && card.imageUrl) {
@@ -91,34 +84,8 @@ export function SwipeCard({
   }
 
   return (
-    <article className="relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-ink/10 bg-[#fffaf2] shadow-[0_24px_80px_rgba(68,40,16,0.14)]">
-      <div className="relative flex-1 overflow-hidden bg-[#f1e7d6]">
-        {media}
-
-        {isTop && card.status === "loading" && (
-          <div className="absolute inset-x-5 bottom-5 rounded-full border border-white/50 bg-white/70 px-4 py-2 text-center text-xs font-medium tracking-[0.16em] text-ink/70 backdrop-blur">
-            generating your next card
-          </div>
-        )}
-        {isTop && canSwipe && keepStampOpacity && (
-          <motion.div
-            style={{ opacity: keepStampOpacity }}
-            className="pointer-events-none absolute left-6 top-8 -rotate-12 rounded-md border-4 border-emerald-500 px-3 py-1 text-2xl font-extrabold uppercase tracking-[0.18em] text-emerald-500"
-            aria-hidden="true"
-          >
-            Keep
-          </motion.div>
-        )}
-        {isTop && canSwipe && passStampOpacity && (
-          <motion.div
-            style={{ opacity: passStampOpacity }}
-            className="pointer-events-none absolute right-6 top-8 rotate-12 rounded-md border-4 border-rose-500 px-3 py-1 text-2xl font-extrabold uppercase tracking-[0.18em] text-rose-500"
-            aria-hidden="true"
-          >
-            Pass
-          </motion.div>
-        )}
-      </div>
+    <article className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-ink/10 bg-[#fffaf2] shadow-[0_24px_80px_rgba(68,40,16,0.14)]">
+      <div className="relative flex-1 overflow-hidden bg-[#f1e7d6]">{media}</div>
 
       <div className="flex items-center justify-between gap-3 border-t border-ink/10 px-5 py-4">
         <div>

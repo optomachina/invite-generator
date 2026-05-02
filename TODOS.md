@@ -6,43 +6,27 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-## Pre-flight
-
-### P1. Verify RTK installation
-
-**What:** Confirm `rtk` is on your PATH and `rtk gain` returns analytics. If missing, install from reachingforthejack/rtk (the Rust Token Killer variant, NOT Rust Type Kit — name collision warning in RTK.md).
-
-**Why:** Your global `~/.claude/RTK.md` says "All other commands are automatically rewritten by the Claude Code hook" — if RTK isn't actually installed, you're missing the 60-90% token savings it claims on dev operations.
-
-**Pros:** Free token savings on every dev session. 2 min check.
-
-**Cons:** None if it's already installed. If not, install involves Rust toolchain.
-
-**Context:** Run `which rtk` and `rtk gain`. If "command not found", install and set up the Claude Code hook per your RTK.md. Delete this TODO when verified.
-
-**Depends on:** Nothing.
-
----
-
 ## v1 (ship-blocking)
 
-### V1.1. Voice-input feature flag + cost kill-switch
+### V1.1. Voice-input feature flag + cost kill-switch — DONE (lean MVP)
 
-**What:** From day one, wrap the `/api/v1/transcribe` endpoint behind a PostHog feature flag that can be toggled without a deploy. Add a cost kill-switch: if transcribe spend exceeds $50 in a rolling 24h window (tracked via a Postgres `transcribe_usage` table with hourly aggregation), auto-disable voice for all sessions and fire a Sentry alert. When disabled, the intake UI silently reverts to text-only.
+**Shipped:** Lean MVP of the gate. PostHog/Postgres/Sentry deferred until those vendors are picked at the project level — the gate works without them and can be swapped in cleanly.
 
-**Why:** Codex outside voice flagged during /plan-eng-review 2026-04-22 that voice is a new abuse surface and the initial defense layer (Turnstile + 60s cap + per-session rate limit) lacks a cost-based circuit breaker. For a pre-validation product with no revenue covering abuse, a silent $500 OpenAI bill from a targeted abuse campaign is a much larger pain than a 2-line check in the request handler.
+- `apps/web/lib/voice-gate.ts` — env-var flag `VOICE_ENABLED` + rolling 24h spend ceiling (`VOICE_COST_WARN_USD`, default 40; `VOICE_COST_KILL_USD`, default 50). Pluggable `UsageStore` interface; in-memory implementation ships now, swap to Upstash Redis or Postgres before voice goes to scale (Vercel serverless = multi-instance, in-memory only protects a single hot instance).
+- `apps/web/app/api/v1/transcribe/route.ts` — stub. 503 `voice_disabled` when gated, 501 `not_implemented` when enabled. Real transcription is a future TODO.
+- `apps/web/app/api/v1/voice-status/route.ts` + `apps/web/app/hooks/useVoiceEnabled.ts` — UI fallback path: hook returns `enabled=false` whenever the gate is closed, so future voice UI silently reverts to text-only.
+- Budget crossings emit Sentry-shaped warn/error logs (`voice.budget.warn`, `voice.budget.killed`) ready to be promoted to alerts when `@sentry/nextjs` lands.
 
-**Pros:** Trivial to add while building the endpoint. Saves you in the long-tail abuse scenario where Turnstile is bypassed. Lets you kill voice instantly if anything goes wrong without a deploy. Cost kill-switches are standard operational hygiene.
-
-**Cons:** Adds one env var, one PostHog flag, one Postgres table, one Sentry alert rule. Negligible cost. Slight latency tax on every transcribe request (<5ms for the flag check + the usage counter increment).
-
-**Context:** PostHog is already in the stack (design doc L122). Feature flag reads happen at Edge before the transcribe handler runs. Usage counter is INSERT-only with a daily cleanup job. Sentry alert fires at $40 threshold (warning) and $50 (auto-disable). Manual re-enable via PostHog dashboard after investigation.
-
-**Depends on:** Voice-input feature being built. This TODO gates shipping voice.
+**Follow-ups before voice ships at scale:**
+- Pick a shared `UsageStore` (Upstash Redis is the path of least resistance) so the kill-switch is correct across instances.
+- Wire PostHog so the flag can be flipped without a redeploy.
+- Wire Sentry so `voice.budget.*` warns/errors page someone.
 
 ---
 
-### V1.2. Thinking-notes template library expansion
+### V1.2. Thinking-notes template library expansion ✅ initial 40 shipped 2026-04-26
+
+**Status:** Initial 40 templates + renderer landed at `apps/web/lib/thinking-notes/{templates,render}.ts` (path moved from `packages/thinking-notes/` since the project is single-app). 20 hand-written + 20 from codex (gpt-5.4 reasoning:high). Loading-expressions reference at `.context/loading-expressions-reference.md` audits against Claude Code spinner verbs — zero overlap. Week-3 expansion to 80 still pending Mrs. W beta feedback.
 
 **What:** Start v1 with 40 canned+interpolated note templates in `packages/thinking-notes/templates.ts`. Expand to 80 templates by week 3 based on Mrs. W's repetition feedback from beta usage. Each template is `{ id: string, text_template: string, context_requires: Array<"name" | "event" | null> }` so the renderer picks only templates where the required context fields are filled.
 
@@ -58,7 +42,11 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-### V1.3. Tinder-style L/R swipe gestures (non-optional per Mrs. W)
+### V1.3. Tinder-style L/R swipe gestures (non-optional per Mrs. W) ✅ shipped 2026-04-30 (web)
+
+**Shipped:**
+- `apps/web/lib/swipe.ts` — pure logic: `shouldCommit(offset, velocity)` (80px or 0.5 velocity), `computeTilt`/`computePeekOpacity`/`computeStampOpacity`, `pushDismissed`/`popDismissed` for undo, `progressFraction`. 22 tests.
+- `apps/web/app/components/SwipeStack.tsx` — drag with live tilt (±15° at 160px) + opacity peek (down to 0.6) wired via `useMotionValue`/`useTransform`. Spring snap-back via `dragSnapToOrigin` below threshold. Green KEEP / red PASS stamps fade in with drag. Circular X/heart action buttons + center undo button as non-swiper fallback. 4-dot progress indicator above the stack with `role="progressbar"`. Exit animation: card flies off (480px) with 18° rotation. iOS port deferred until iOS app exists.
 
 **What:** Replace tap-to-choose on the swipe screen with full Tinder-style card-stack physics: drag with tilt+opacity peek, snap-back on weak swipes, decisive L/R commits the keep/discard, undo button, 4-dot progress dots, circular X/heart buttons under the stack as a non-swiper fallback. Both web and iOS.
 
@@ -90,7 +78,13 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-### V1.5. Generating screen: status copy dedup + thinking-notes voice
+### V1.5. Generating screen: status copy dedup + thinking-notes voice ✅ shipped 2026-04-30
+
+**Shipped:**
+- `apps/web/lib/thinking-notes/status.ts` — pure `buildCanonicalStatus(ctx)`. One canonical phrasing: "Sketching {n} invites for {honoree}'s {event}…" with graceful fallbacks (honoree-only, event-only, bare). Reuses `containsWord` from `lib/intake.ts` to avoid double-prepending the ordinal age.
+- `apps/web/app/components/GeneratingStatus.tsx` — top-of-section status card: canonical line on top, thinking-note rotating beneath it via framer-motion fade. Shuffles applicable templates per session, rotates every 4-6s (`pickIntervalMs`), wraps with `nextNoteIndex`. `aria-live="polite"`.
+- Dedup: removed the redundant per-card "generating your next card" overlay in `SwipeCard.tsx` and the "Next card is still rendering." string in `SwipeStack.tsx`. The canonical status is now the single source of truth during the loading window.
+- Tests: `status.test.ts` (9 cases — singular/plural, ordinal handling, all fallbacks) + `rotate.test.ts` (deterministic shuffle, wrap, interval bounds). 64 tests pass total. Typecheck + build clean.
 
 **What:** Two fixes on the generating screen. (a) Show one status line max — "Sketching… Sketching… Sketching 4 concepts for Lily's first birthday" reads like a stuttering bug. Pick one canonical phrasing and stick with it for the session. (b) Adopt Claude's flip-book thinking-notes voice — small clever notes like "Adding a dash of cake…" / "Picking colors Lily would love" — instead of sterile progress copy. Add jokes and contextual references (honoree name, event type) so it feels like a designer is in the room, not a load bar.
 
@@ -187,3 +181,21 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 **Context:** v1 ships intake without this. Gather week-3 data first — what do paying users consistently NOT get right on first generation? What do refund requests cite? That signal tells you whether the extraction loop would have caught it. Natural follow-on to the existing `POST /api/v1/events/parse` endpoint: add `POST /api/v1/events/refine` that takes the current parsed state and returns `{ next_question?, confidence, ready_to_generate }`. Loop until `ready_to_generate=true` or user hits "I'm done, generate."
 
 **Depends on:** v1 paid-conversion data. Don't build before week 3.
+
+---
+
+## Done
+
+### ~~P1. Verify RTK installation~~ ✓ 2026-04-26
+
+**~~What:~~** ~~Confirm `rtk` is on your PATH and `rtk gain` returns analytics. If missing, install from reachingforthejack/rtk (the Rust Token Killer variant, NOT Rust Type Kit — name collision warning in RTK.md).~~
+
+**~~Why:~~** ~~Your global `~/.claude/RTK.md` says "All other commands are automatically rewritten by the Claude Code hook" — if RTK isn't actually installed, you're missing the 60-90% token savings it claims on dev operations.~~
+
+**~~Pros:~~** ~~Free token savings on every dev session. 2 min check.~~
+
+**~~Cons:~~** ~~None if it's already installed. If not, install involves Rust toolchain.~~
+
+**~~Context:~~** ~~Run `which rtk` and `rtk gain`. If "command not found", install and set up the Claude Code hook per your RTK.md. Delete this TODO when verified.~~ Verified: rtk 0.35.0 at `/Users/blainewilson/.local/bin/rtk`, 50.2% savings across 1707 commands.
+
+**~~Depends on:~~** ~~Nothing.~~
