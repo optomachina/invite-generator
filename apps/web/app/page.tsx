@@ -222,6 +222,22 @@ export default function Page() {
     }
   }
 
+  function resetToSwipe() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current = [];
+    setLoading(false);
+    setError(null);
+    setSessionSummary(null);
+    setCards([]);
+    setRoundResult(null);
+    setCompareSelectedId(null);
+    setCompareFields(null);
+    setPaidWinner(null);
+    setPhase("swipe");
+  }
+
   async function generate() {
     abortRef.current?.abort();
     objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -481,14 +497,7 @@ export default function Page() {
         <section className="space-y-4">
           <RoundCompletePanel
             result={roundResult}
-            onStartOver={() => {
-              setRoundResult(null);
-              setCompareSelectedId(null);
-              setCompareFields(null);
-              setPhase("swipe");
-              setCards([]);
-              setSessionSummary(null);
-            }}
+            onStartOver={resetToSwipe}
             onGenerateMore={() => {
               void generate();
             }}
@@ -554,15 +563,7 @@ export default function Page() {
           )}
           <button
             type="button"
-            onClick={() => {
-              setPaidWinner(null);
-              setRoundResult(null);
-              setCompareSelectedId(null);
-              setCompareFields(null);
-              setPhase("swipe");
-              setCards([]);
-              setSessionSummary(null);
-            }}
+            onClick={resetToSwipe}
             className="mt-6 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-ink/90"
           >
             Start a new round
