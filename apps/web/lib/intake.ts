@@ -69,15 +69,16 @@ export function buildPrompt(intake: Intake): string {
       ? `${ordinal(intake.age)} ${intake.event}`
       : intake.event;
   return [
-    `An editorial-quality custom invitation design for ${intake.honoree}'s ${eventLabel}.`,
+    `An editorial-quality custom invitation illustration for ${intake.honoree}'s ${eventLabel}.`,
     `Vibe: ${intake.vibe}.`,
-    `Composition: portrait 5x7, leave clean negative space in the upper third for event text overlay.`,
+    `Composition: portrait 5x7. The bottom third must be a calm, near-empty area`,
+    `(soft cream, gentle vignette, or muted background) reserved for typography that`,
+    `will be overlaid in post — keep it free of figures, busy patterns, and lettering.`,
     `Style references: hand-illustrated, warm cream paper, restrained color palette,`,
     `subtle grain, generous whitespace, looks like a boutique stationer made it — not a template.`,
     `Avoid: stock-photo aesthetic, generic SaaS color palette, purple/indigo gradients, slate/zinc neutrals.`,
-    `Render the event text directly into the design (honoree name "${intake.honoree}",`,
-    `date "${intake.date}", time "${intake.time}", location "${intake.location}") with`,
-    `editorial serif typography. Make text crisp and legible.`,
+    `Do NOT render event text, names, dates, times, locations, or any letters/words`,
+    `into the image. Text will be added in a separate pass.`,
   ].join(" ");
 }
 

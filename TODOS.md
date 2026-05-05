@@ -116,7 +116,20 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
-### V1.7. Code-overlay text rendering pipeline
+### V1.7. Code-overlay text rendering pipeline ✅ shipped 2026-05-05
+
+**Shipped:**
+- `apps/web/lib/text-overlay/` — `types`, `layouts` (bottom-third), `fonts` (Great Vibes + Lato Regular/Bold loaded via opentype.js, ~1.7MB bundled OFL fonts), `compose` (text → SVG glyph paths, per-glyph `<g translate>` to dodge librsvg path-data length limits), `render` (sharp composite). Pure-fn tests + a smoke test that writes visual evidence to `.context/v17-smoke-{script,sans}.png` when `WRITE_SMOKE_OUTPUTS=1`.
+- `apps/web/app/api/v1/render-text/route.ts` — Node-runtime POST endpoint. Validates fields (≤200 chars), caps image upload at 8MB, returns composited PNG b64.
+- `apps/web/app/hooks/useTextOverlay.ts` — debounced (350ms) per-card render hook with abort, blob URL caching, error state. Concurrent renders for all kept cards.
+- `ComparePayScreen` swaps in the composited image with "rendering text…" / "updating…" loading states.
+- `SwipeCardData` extended with `imageB64 / layout / fontStack`; concepts alternate `script` ↔ `sans` per index.
+- `buildPrompt()` flipped: bottom-third reserved for the overlay; model explicitly told NOT to render letters into the image.
+- Deps: `sharp`, `opentype.js`, `@types/opentype.js`.
+
+**Pivot story (preserved for future me):** SVG `@font-face` base64 silently falls back to system sans in librsvg. `sharp.text()` requires Fontconfig that doesn't reliably resolve bundled fonts on macOS. Pivoted to opentype.js → SVG `<path>` glyphs. Two more bugs: opentype 1.3.5 trips on Lato's GSUB `lookupType:6 substFormat:2` (fixed by glyph-by-glyph rendering, skipping shaping), and librsvg silently truncates long concatenated path `d` data (fixed by emitting one `<path>` per glyph inside per-glyph `<g translate>`).
+
+**Original spec for context:**
 
 **What:** Server-side compositor that takes `(background_image, fields, layout_template) => final_png`. Prompt the model to leave a clean text region in each generated concept, then overlay the user's actual text strings (honoree, event, date, time, location, customLine) using real fonts via `sharp` (or skia-canvas). Pick a small set of layout templates (e.g., bottom-third title block, centered card, top-banner) and a small font set per aesthetic (script, modern serif, sans). Concept generation stores `{ imageUrl, layout: "bottom-third", fontStack: "script" }` so re-renders are deterministic.
 

@@ -128,7 +128,7 @@ describe("buildPrompt", () => {
     const prompt = buildPrompt(intake);
     expect(prompt).toContain("Lily");
     expect(prompt).toContain("garden tea-party");
-    expect(prompt).toContain("Saturday, June 13");
+    expect(prompt).toContain("birthday party");
   });
 
   test("injects ordinal when age is present and missing from event", () => {
@@ -143,5 +143,11 @@ describe("buildPrompt", () => {
   test("omits ordinal when age is undefined", () => {
     const prompt = buildPrompt({ ...intake, age: undefined });
     expect(prompt).not.toMatch(/\b\d+(st|nd|rd|th)\b/);
+  });
+
+  test("reserves bottom third and tells model not to render text", () => {
+    const prompt = buildPrompt(intake);
+    expect(prompt.toLowerCase()).toContain("bottom third");
+    expect(prompt).toMatch(/do not render event text|Do NOT render event text/i);
   });
 });

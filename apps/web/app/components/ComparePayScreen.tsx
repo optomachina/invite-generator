@@ -6,6 +6,7 @@ import {
   EditTextForm,
   type ComparePayFields,
 } from "@/app/components/EditTextForm";
+import { useTextOverlay } from "@/app/hooks/useTextOverlay";
 
 type ComparePayScreenProps = {
   kept: SwipeCardData[];
@@ -43,6 +44,8 @@ export function ComparePayScreen({
     () => kept.find((c) => c.id === selectedId) ?? null,
     [kept, selectedId],
   );
+
+  const overlays = useTextOverlay(kept, fields);
 
   const priceLabel = usdFormatter.format(PRICE_USD);
 
@@ -85,6 +88,9 @@ export function ComparePayScreen({
           const baseBorder = selected
             ? "border-emerald-500 ring-2 ring-emerald-500/30"
             : "border-ink/10";
+          const overlay = overlays[card.id];
+          const displayUrl = overlay?.url ?? card.imageUrl;
+          const showOverlaySpinner = card.status === "ready" && overlay?.loading && !overlay.url;
           return (
             <button
               key={card.id}
@@ -95,16 +101,28 @@ export function ComparePayScreen({
               className={`group flex flex-col overflow-hidden rounded-[1.5rem] border bg-white text-left transition ${baseBorder}`}
             >
               <div className="relative aspect-[5/7] overflow-hidden bg-[#f1e7d6]">
-                {card.status === "ready" && card.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={card.imageUrl}
-                    alt={`Concept ${card.index + 1}`}
-                    className="h-full w-full object-cover"
-                  />
+                {card.status === "ready" && displayUrl ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={displayUrl}
+                      alt={`Concept ${card.index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                    {overlay?.loading && overlay.url && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-black/30 to-transparent py-2 text-[10px] uppercase tracking-[0.22em] text-white/85">
+                        updating…
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="flex h-full items-center justify-center text-xs uppercase tracking-[0.2em] text-ink/55">
                     {card.status === "error" ? "unavailable" : "loading"}
+                  </div>
+                )}
+                {showOverlaySpinner && (
+                  <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-cream/85 via-cream/40 to-transparent pb-6 text-[11px] uppercase tracking-[0.22em] text-ink/65">
+                    rendering text…
                   </div>
                 )}
               </div>
