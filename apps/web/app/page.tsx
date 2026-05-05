@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { GeneratingStatus } from "@/app/components/GeneratingStatus";
 import { IntakeHybrid } from "@/app/components/IntakeHybrid";
-import { SwipeStack } from "@/app/components/SwipeStack";
+import { SwipeStack, type SwipeRoundResult } from "@/app/components/SwipeStack";
 import type { SwipeCardData } from "@/app/components/swipe-types";
+import { RoundCompletePanel } from "@/app/components/RoundCompletePanel";
+import { ComparePayScreen, pickInitialKeptId } from "@/app/components/ComparePayScreen";
+import type { ComparePayFields } from "@/app/components/EditTextForm";
 import { b64ToObjectUrl } from "@/lib/image";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
 import type { Intake } from "@/lib/intake";
@@ -114,6 +117,11 @@ export default function Page() {
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionKey, setSessionKey] = useState(0);
+  const [roundResult, setRoundResult] = useState<SwipeRoundResult | null>(null);
+  const [phase, setPhase] = useState<"swipe" | "round-complete" | "compare-pay" | "paid-stub">("swipe");
+  const [compareSelectedId, setCompareSelectedId] = useState<string | null>(null);
+  const [compareFields, setCompareFields] = useState<ComparePayFields | null>(null);
+  const [paidWinner, setPaidWinner] = useState<{ card: SwipeCardData; fields: ComparePayFields } | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -214,6 +222,22 @@ export default function Page() {
     }
   }
 
+  function resetToSwipe() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current = [];
+    setLoading(false);
+    setError(null);
+    setSessionSummary(null);
+    setCards([]);
+    setRoundResult(null);
+    setCompareSelectedId(null);
+    setCompareFields(null);
+    setPaidWinner(null);
+    setPhase("swipe");
+  }
+
   async function generate() {
     abortRef.current?.abort();
     objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -223,6 +247,11 @@ export default function Page() {
     setSessionSummary(null);
     setCards(createLoadingCards());
     setSessionKey((prev) => prev + 1);
+    setRoundResult(null);
+    setPhase("swipe");
+    setCompareSelectedId(null);
+    setCompareFields(null);
+    setPaidWinner(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -428,7 +457,7 @@ export default function Page() {
         </div>
       )}
 
-      {cards.length > 0 && (
+      {cards.length > 0 && phase === "swipe" && (
         <section>
           <GeneratingStatus
             active={loading && loadingCount > 0}
@@ -447,13 +476,98 @@ export default function Page() {
               <span className="text-ink/50">{settings.model} · {settings.quality} · {settings.size}</span>
             </div>
           </div>
-          <SwipeStack cards={cards} sessionKey={sessionKey} />
+          <SwipeStack
+            cards={cards}
+            sessionKey={sessionKey}
+            onRoundComplete={(result) => {
+              setRoundResult(result);
+              setPhase("round-complete");
+            }}
+          />
           <details className="mt-6">
             <summary className="cursor-pointer text-xs text-ink/60">prompt used</summary>
             <pre className="mt-2 whitespace-pre-wrap text-xs text-ink/70">
               {sessionSummary?.prompt ?? "Prompt will appear when the stream finishes."}
             </pre>
           </details>
+        </section>
+      )}
+
+      {phase === "round-complete" && roundResult && (
+        <section className="space-y-4">
+          <RoundCompletePanel
+            result={roundResult}
+            onStartOver={resetToSwipe}
+            onGenerateMore={() => {
+              void generate();
+            }}
+          />
+          {roundResult.kept.some((c) => c.status === "ready") && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const readyKept = roundResult.kept.filter((c) => c.status === "ready");
+                  if (compareSelectedId === null) {
+                    setCompareSelectedId(pickInitialKeptId(readyKept));
+                  }
+                  if (compareFields === null) {
+                    setCompareFields({
+                      honoree: intake.honoree,
+                      event: intake.event,
+                      date: intake.date,
+                      time: intake.time,
+                      location: intake.location,
+                      customLine: "",
+                    });
+                  }
+                  setPhase("compare-pay");
+                }}
+                className="rounded-full bg-ochre px-5 py-2.5 text-sm font-medium text-cream shadow-sm transition hover:bg-ochre/90"
+              >
+                Continue to checkout →
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {phase === "compare-pay" && roundResult && compareFields && (
+        <ComparePayScreen
+          kept={roundResult.kept.filter((c) => c.status === "ready")}
+          fields={compareFields}
+          selectedId={compareSelectedId}
+          onFieldsChange={setCompareFields}
+          onSelect={setCompareSelectedId}
+          onBack={() => setPhase("round-complete")}
+          onPay={(winner, fields) => {
+            setPaidWinner({ card: winner, fields });
+            setPhase("paid-stub");
+          }}
+        />
+      )}
+
+      {phase === "paid-stub" && paidWinner && (
+        <section className="rounded-[2rem] border border-ink/10 bg-[#fffaf2] p-6 text-center shadow-[0_24px_80px_rgba(68,40,16,0.14)] sm:p-8">
+          <h2 className="font-serif text-3xl text-ink">Checkout flow coming soon</h2>
+          <p className="mt-2 text-sm text-ink/70">
+            We captured <span className="font-medium">Concept {paidWinner.card.index + 1}</span>
+            {" "}for {paidWinner.fields.honoree}&apos;s {paidWinner.fields.event}.
+            Real payment + share page is the next ship.
+          </p>
+          {paidWinner.card.imageUrl && (
+            <div className="mx-auto mt-4 max-w-xs overflow-hidden rounded-[1.5rem] border border-ink/10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={paidWinner.card.imageUrl} alt={`Concept ${paidWinner.card.index + 1}`} className="h-full w-full object-cover" />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={resetToSwipe}
+            className="mt-6 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-ink/90"
+          >
+            Start a new round
+          </button>
         </section>
       )}
     </main>

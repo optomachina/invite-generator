@@ -16,15 +16,21 @@ import {
   type SwipeDirection,
 } from "@/lib/swipe";
 
+export type SwipeRoundResult = {
+  kept: SwipeCardData[];
+  passed: SwipeCardData[];
+};
+
 type SwipeStackProps = {
   cards: SwipeCardData[];
   sessionKey: number;
+  onRoundComplete?: (result: SwipeRoundResult) => void;
 };
 
 const EXIT_X = 480;
 const EXIT_ROTATION = 18;
 
-export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
+export function SwipeStack({ cards, sessionKey, onRoundComplete }: Readonly<SwipeStackProps>) {
   const [dismissed, setDismissed] = useState<DismissedEntry[]>([]);
   const [removingById, setRemovingById] = useState<Record<string, SwipeDirection>>({});
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
@@ -64,6 +70,24 @@ export function SwipeStack({ cards, sessionKey }: Readonly<SwipeStackProps>) {
   const topCard = visibleCards[0];
   const swipedCount = dismissed.length;
   const totalCount = cards.length;
+
+  const actionableCards = cards.filter((card) => card.status !== "loading");
+  const everyActionableSwiped =
+    actionableCards.length > 0 &&
+    cards.every((card) => card.status !== "loading") &&
+    actionableCards.every((card) => dismissedIds.has(card.id)) &&
+    Object.keys(removingById).length === 0;
+
+  useEffect(() => {
+    if (!onRoundComplete) return;
+    if (!everyActionableSwiped) return;
+    const directionById = new Map<string, SwipeDirection>(
+      dismissed.map((entry) => [entry.id, entry.direction]),
+    );
+    const kept = cards.filter((card) => directionById.get(card.id) === "right");
+    const passed = cards.filter((card) => directionById.get(card.id) === "left");
+    onRoundComplete({ kept, passed });
+  }, [everyActionableSwiped, cards, dismissed, onRoundComplete]);
 
   let statusText = "No more cards in this round.";
   if (topCard?.status === "loading") {
