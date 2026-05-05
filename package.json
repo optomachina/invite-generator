@@ -1,6 +1,7 @@
 {
   "name": "invite-generator",
   "private": true,
+  "workspaces": ["apps/*"],
   "scripts": {
     "dev": "cd apps/web && bun dev",
     "build": "cd apps/web && bun run build",
