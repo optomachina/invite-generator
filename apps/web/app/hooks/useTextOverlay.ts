@@ -70,40 +70,39 @@ export function useTextOverlay(
   useEffect(() => {
     const key = fieldsKey(fields);
 
-    const timer = setTimeout(() => {
-      for (const card of cards) {
-        if (!card.imageB64) continue;
-        const cardId = card.id;
-        if (lastKeyRef.current[cardId] === key) continue;
-        lastKeyRef.current[cardId] = key;
+    const startRender = async (card: SwipeCardData) => {
+      const cardId = card.id;
+      if (!card.imageB64 || lastKeyRef.current[cardId] === key) return;
+      lastKeyRef.current[cardId] = key;
 
-        inFlightRef.current.get(cardId)?.abort();
-        const controller = new AbortController();
-        inFlightRef.current.set(cardId, controller);
+      inFlightRef.current.get(cardId)?.abort();
+      const controller = new AbortController();
+      inFlightRef.current.set(cardId, controller);
 
-        setState((prev) => ({
-          ...prev,
-          [cardId]: { ...prev[cardId], loading: true, error: undefined },
-        }));
+      setState((prev) => ({
+        ...prev,
+        [cardId]: { ...prev[cardId], loading: true, error: undefined },
+      }));
 
-        fetchOverlay(card, fields, controller.signal)
-          .then((url) => {
-            const prev = urlCacheRef.current[cardId];
-            if (prev) URL.revokeObjectURL(prev);
-            urlCacheRef.current[cardId] = url;
-            setState((s) => ({ ...s, [cardId]: { url, loading: false } }));
-          })
-          .catch((err: unknown) => {
-            if (controller.signal.aborted) return;
-            const message = err instanceof Error ? err.message : String(err);
-            setState((s) => ({ ...s, [cardId]: { ...s[cardId], loading: false, error: message } }));
-          })
-          .finally(() => {
-            if (inFlightRef.current.get(cardId) === controller) {
-              inFlightRef.current.delete(cardId);
-            }
-          });
+      try {
+        const url = await fetchOverlay(card, fields, controller.signal);
+        const prevUrl = urlCacheRef.current[cardId];
+        if (prevUrl) URL.revokeObjectURL(prevUrl);
+        urlCacheRef.current[cardId] = url;
+        setState((s) => ({ ...s, [cardId]: { url, loading: false } }));
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setState((s) => ({ ...s, [cardId]: { ...s[cardId], loading: false, error: message } }));
+      } finally {
+        if (inFlightRef.current.get(cardId) === controller) {
+          inFlightRef.current.delete(cardId);
+        }
       }
+    };
+
+    const timer = setTimeout(() => {
+      for (const card of cards) void startRender(card);
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
