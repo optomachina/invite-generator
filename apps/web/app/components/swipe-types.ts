@@ -1,3 +1,5 @@
+import type { FontStackId, LayoutId } from "@/lib/text-overlay/types";
+
 export type SwipeCardStatus = "loading" | "ready" | "error";
 
 export type SwipeCardData = {
@@ -5,6 +7,9 @@ export type SwipeCardData = {
   index: number;
   status: SwipeCardStatus;
   imageUrl?: string;
+  imageB64?: string;
+  layout?: LayoutId;
+  fontStack?: FontStackId;
   error?: string;
   ms?: number;
   costUsd?: number;
