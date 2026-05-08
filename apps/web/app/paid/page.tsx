@@ -3,15 +3,15 @@ import { PaidPoll } from "./PaidPoll";
 export const dynamic = "force-dynamic";
 
 type PaidPageProps = {
-  searchParams: Promise<{ orderId?: string }>;
+  searchParams: Promise<{ orderId?: string; token?: string }>;
 };
 
 export default async function PaidPage({
   searchParams,
 }: Readonly<PaidPageProps>) {
-  const { orderId } = await searchParams;
+  const { orderId, token } = await searchParams;
 
-  if (!orderId) {
+  if (!orderId || !token) {
     return (
       <main className="mx-auto max-w-xl px-6 py-16 text-center">
         <h1 className="font-serif text-3xl text-ink">Missing order</h1>
@@ -24,7 +24,7 @@ export default async function PaidPage({
 
   return (
     <main className="mx-auto max-w-xl px-6 py-12">
-      <PaidPoll orderId={orderId} />
+      <PaidPoll orderId={orderId} token={token} />
     </main>
   );
 }

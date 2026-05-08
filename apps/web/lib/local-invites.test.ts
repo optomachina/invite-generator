@@ -44,7 +44,7 @@ describe("upsertInvite", () => {
     const a: StoredInvite = { ...sample, id: "a" };
     const b: StoredInvite = { ...sample, id: "b" };
     const updatedA: StoredInvite = { ...sample, id: "a", honoree: "Updated" };
-    const result = upsertInvite([a, b], updatedA);
+    const result = upsertInvite([b, a], updatedA);
     expect(result.map((r) => r.id)).toEqual(["a", "b"]);
     expect(result[0].honoree).toBe("Updated");
   });

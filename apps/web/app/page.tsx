@@ -128,6 +128,7 @@ export default function Page() {
   const objectUrlsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const checkoutGoRef = useRef<HTMLAnchorElement | null>(null);
+  const checkoutInFlightRef = useRef(false);
 
   useEffect(() => {
     if (checkoutGoHref && checkoutGoRef.current) {
@@ -561,7 +562,8 @@ export default function Page() {
           onSelect={setCompareSelectedId}
           onBack={() => setPhase("round-complete")}
           onPay={async (winner, fields) => {
-            if (checkoutPending) return;
+            if (checkoutInFlightRef.current || checkoutPending) return;
+            checkoutInFlightRef.current = true;
             setCheckoutPending(true);
             setCheckoutError(null);
             try {
@@ -593,6 +595,7 @@ export default function Page() {
             } catch (err) {
               setCheckoutError(err instanceof Error ? err.message : String(err));
               setCheckoutPending(false);
+              checkoutInFlightRef.current = false;
             }
           }}
         />

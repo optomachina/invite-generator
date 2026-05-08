@@ -39,7 +39,8 @@ export const orders = pgTable(
       .default(sql`now()`),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
-      .default(sql`now()`),
+      .default(sql`now()`)
+      .$onUpdate(() => new Date()),
   },
   (table) => ({
     sessionIdx: uniqueIndex("orders_stripe_session_idx").on(

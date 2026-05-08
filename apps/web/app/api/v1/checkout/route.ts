@@ -8,6 +8,7 @@ import {
   isFontStackId,
   isLayoutId,
 } from "@/lib/text-overlay/types";
+import { appOrigin } from "@/lib/urls";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -16,13 +17,6 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function fail(status: number, error: string) {
   return Response.json({ error }, { status });
-}
-
-function originFromRequest(req: Request): string {
-  const fwdHost = req.headers.get("x-forwarded-host");
-  const fwdProto = req.headers.get("x-forwarded-proto") ?? "https";
-  if (fwdHost) return `${fwdProto}://${fwdHost}`;
-  return new URL(req.url).origin;
 }
 
 export async function POST(req: Request) {
@@ -79,7 +73,10 @@ export async function POST(req: Request) {
     return fail(500, "could not create order");
   }
 
-  const origin = originFromRequest(req);
+  const origin = appOrigin();
+  const successUrl = new URL("/paid", `${origin}/`);
+  successUrl.searchParams.set("orderId", order.id);
+  successUrl.searchParams.set("token", order.accessToken);
 
   try {
     const session = await getStripe().checkout.sessions.create({
@@ -87,7 +84,7 @@ export async function POST(req: Request) {
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: order.id,
       metadata: { orderId: order.id },
-      success_url: `${origin}/paid?orderId=${order.id}`,
+      success_url: successUrl.toString(),
       cancel_url: `${origin}/?checkout=canceled`,
       payment_intent_data: {
         metadata: { orderId: order.id },

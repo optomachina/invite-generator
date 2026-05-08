@@ -13,7 +13,6 @@ type OrderResponse = {
   status: "pending" | "paid" | "fulfilled" | "failed";
   fields: ComparePayFields;
   finalImageB64: string | null;
-  customerEmail?: string;
 };
 
 const DEBOUNCE_MS = 350;

@@ -30,6 +30,5 @@ export async function GET(
     status: order.status,
     fields: order.fields,
     finalImageB64: order.finalImageB64,
-    customerEmail: order.customerEmail,
   });
 }

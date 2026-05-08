@@ -12,6 +12,12 @@ function getResend(): Resend {
   return cached;
 }
 
+function getResendFrom(): string {
+  const from = process.env.RESEND_FROM;
+  if (!from) throw new Error("RESEND_FROM not set");
+  return from;
+}
+
 export type InviteEmail = {
   to: string;
   honoree: string;
@@ -29,7 +35,7 @@ function escapeHtml(s: string): string {
 }
 
 export async function sendInviteEmail(input: InviteEmail): Promise<void> {
-  const from = process.env.RESEND_FROM ?? "invites@example.com";
+  const from = getResendFrom();
   const subject = input.honoree
     ? `Your invite for ${input.honoree}'s ${input.event || "event"}`
     : "Your invite is ready";
@@ -65,7 +71,7 @@ export type RecoveryEmail = {
 
 export async function sendRecoveryEmail(input: RecoveryEmail): Promise<void> {
   if (input.links.length === 0) return;
-  const from = process.env.RESEND_FROM ?? "invites@example.com";
+  const from = getResendFrom();
   const items = input.links
     .map((l) => {
       const label = l.honoree

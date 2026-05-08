@@ -2,32 +2,35 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import type { ComparePayFields } from "@/app/components/EditTextForm";
 import { saveStoredInvite } from "@/lib/local-invites";
 
-type StatusResponse = {
+type OrderResponse = {
   id: string;
   status: "pending" | "paid" | "fulfilled" | "failed";
+  fields: ComparePayFields;
   finalImageB64: string | null;
-  accessToken: string | null;
-  honoree: string;
-  event: string;
 };
 
 const POLL_MS = 1500;
 const SLOW_AFTER_MS = 30_000;
 
 type PollResult =
-  | { kind: "ok"; data: StatusResponse; done: boolean }
+  | { kind: "ok"; data: OrderResponse; done: boolean }
   | { kind: "http"; status: number }
   | { kind: "error"; message: string };
 
-async function fetchStatus(orderId: string): Promise<PollResult> {
+async function fetchStatus(
+  orderId: string,
+  token: string,
+): Promise<PollResult> {
   try {
-    const res = await fetch(`/api/v1/orders/${orderId}/status`, {
-      cache: "no-store",
-    });
+    const res = await fetch(
+      `/api/v1/orders/${orderId}?token=${encodeURIComponent(token)}`,
+      { cache: "no-store" },
+    );
     if (!res.ok) return { kind: "http", status: res.status };
-    const data = (await res.json()) as StatusResponse;
+    const data = (await res.json()) as OrderResponse;
     const done = data.status === "fulfilled" || data.status === "failed";
     return { kind: "ok", data, done };
   } catch (err) {
@@ -38,8 +41,11 @@ async function fetchStatus(orderId: string): Promise<PollResult> {
   }
 }
 
-export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
-  const [data, setData] = useState<StatusResponse | null>(null);
+export function PaidPoll({
+  orderId,
+  token,
+}: Readonly<{ orderId: string; token: string }>) {
+  const [data, setData] = useState<OrderResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const startedAt = useRef(Date.now());
@@ -47,16 +53,16 @@ export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
 
   useEffect(() => {
     if (persistedRef.current) return;
-    if (data?.status !== "fulfilled" || !data.accessToken) return;
+    if (data?.status !== "fulfilled") return;
     persistedRef.current = true;
     saveStoredInvite({
       id: data.id,
-      accessToken: data.accessToken,
-      honoree: data.honoree,
-      event: data.event,
+      accessToken: token,
+      honoree: data.fields.honoree,
+      event: data.fields.event,
       fulfilledAt: new Date().toISOString(),
     });
-  }, [data]);
+  }, [data, token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +83,7 @@ export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
     };
 
     const tick = async () => {
-      const result = await fetchStatus(orderId);
+      const result = await fetchStatus(orderId, token);
       if (cancelled) return;
       const done = applyResult(result);
       if (done) return;
@@ -90,7 +96,7 @@ export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [orderId]);
+  }, [orderId, token]);
 
   const slow = elapsed > SLOW_AFTER_MS;
   const imageUrl = useMemo(() => {
@@ -99,10 +105,9 @@ export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
   }, [data?.finalImageB64]);
 
   if (data?.status === "fulfilled" && imageUrl) {
-    const filename = `${(data.honoree || "invite").replace(/[^a-z0-9-_]+/gi, "-")}.png`;
-    const manageHref = data.accessToken
-      ? `/invite/${data.id}?token=${encodeURIComponent(data.accessToken)}`
-      : null;
+    const honoree = data.fields.honoree;
+    const filename = `${(honoree || "invite").replace(/[^a-z0-9-_]+/gi, "-")}.png`;
+    const manageHref = `/invite/${data.id}?token=${encodeURIComponent(token)}`;
     return (
       <section className="rounded-[2rem] border border-ink/10 bg-[#fffaf2] p-6 text-center shadow-[0_24px_80px_rgba(68,40,16,0.14)] sm:p-8">
         <h1 className="font-serif text-3xl text-ink">Your invite is ready</h1>
@@ -122,14 +127,12 @@ export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
           >
             Download PNG
           </a>
-          {manageHref && (
-            <a
-              href={manageHref}
-              className="inline-flex items-center justify-center rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-white/80"
-            >
-              Edit text
-            </a>
-          )}
+          <a
+            href={manageHref}
+            className="inline-flex items-center justify-center rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-white/80"
+          >
+            Edit text
+          </a>
         </div>
       </section>
     );

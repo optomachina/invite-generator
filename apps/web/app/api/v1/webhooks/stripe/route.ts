@@ -113,10 +113,24 @@ export async function POST(req: Request) {
   });
 
   if (!claimed) {
-    logger.info("stripe.webhook.already_processed", {
-      orderId: resolvedOrderId,
-      eventId: event.id,
-    });
+    const existing = await getOrder(resolvedOrderId);
+    if (
+      existing &&
+      existing.stripeEventId === event.id &&
+      existing.status !== "fulfilled"
+    ) {
+      logger.info("stripe.webhook.retry_fulfill", {
+        orderId: resolvedOrderId,
+        eventId: event.id,
+        status: existing.status,
+      });
+      await fulfill(resolvedOrderId);
+    } else {
+      logger.info("stripe.webhook.already_processed", {
+        orderId: resolvedOrderId,
+        eventId: event.id,
+      });
+    }
     return Response.json({ received: true });
   }
 
