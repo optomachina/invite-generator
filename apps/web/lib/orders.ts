@@ -77,11 +77,15 @@ export async function updateFieldsAndImage(
 
 export async function attachStripeSession(
   orderId: string,
-  sessionId: string,
+  args: { sessionId: string; checkoutUrl: string },
 ): Promise<void> {
   await getDb()
     .update(schema.orders)
-    .set({ stripeSessionId: sessionId, updatedAt: sql`now()` })
+    .set({
+      stripeSessionId: args.sessionId,
+      stripeCheckoutUrl: args.checkoutUrl,
+      updatedAt: sql`now()`,
+    })
     .where(eq(schema.orders.id, orderId));
 }
 

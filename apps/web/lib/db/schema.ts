@@ -23,6 +23,7 @@ export const orders = pgTable(
     accessToken: text("access_token").notNull(),
     status: orderStatus("status").notNull().default("pending"),
     stripeSessionId: text("stripe_session_id"),
+    stripeCheckoutUrl: text("stripe_checkout_url"),
     stripeEventId: text("stripe_event_id"),
     winnerIndex: text("winner_index").notNull(),
     fields: jsonb("fields").$type<OrderFields>().notNull(),

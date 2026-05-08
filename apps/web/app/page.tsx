@@ -572,14 +572,14 @@ export default function Page() {
                 const text = await res.text().catch(() => "");
                 throw new Error(text || `checkout failed: ${res.status}`);
               }
-              const data = (await res.json()) as { url: string };
+              const data = (await res.json()) as { orderId: string };
               if (
-                typeof data.url !== "string" ||
-                !data.url.startsWith("https://checkout.stripe.com/")
+                typeof data.orderId !== "string" ||
+                !/^[0-9a-f-]{36}$/i.test(data.orderId)
               ) {
-                throw new Error("invalid checkout url");
+                throw new Error("invalid orderId");
               }
-              window.location.assign(data.url);
+              window.location.assign(`/api/v1/checkout/${data.orderId}/go`);
             } catch (err) {
               setCheckoutError(err instanceof Error ? err.message : String(err));
               setCheckoutPending(false);

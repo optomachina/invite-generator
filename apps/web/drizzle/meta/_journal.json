@@ -8,6 +8,13 @@
       "when": 1778261945419,
       "tag": "0000_init_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778265693627,
+      "tag": "0001_checkout_url",
+      "breakpoints": true
     }
   ]
 }

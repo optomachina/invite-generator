@@ -100,7 +100,10 @@ export async function POST(req: Request) {
       return fail(500, "stripe returned no checkout url");
     }
 
-    await attachStripeSession(order.id, session.id);
+    await attachStripeSession(order.id, {
+      sessionId: session.id,
+      checkoutUrl: session.url,
+    });
 
     logger.info("checkout.created", {
       orderId: order.id,
@@ -108,7 +111,7 @@ export async function POST(req: Request) {
       pricedAt: PRICE_USD_CENTS,
     });
 
-    return Response.json({ url: session.url, orderId: order.id });
+    return Response.json({ orderId: order.id });
   } catch (err) {
     logger.error("checkout.stripe_failed", {
       err,
