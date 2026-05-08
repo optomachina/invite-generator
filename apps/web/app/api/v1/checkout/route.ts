@@ -1,0 +1,146 @@
+import { logger } from "@/lib/logger";
+import { createOrder, attachStripeSession } from "@/lib/orders";
+import { getStripe, PRICE_USD_CENTS } from "@/lib/stripe";
+import {
+  DEFAULT_FONT_STACK,
+  DEFAULT_LAYOUT,
+  isFontStackId,
+  isLayoutId,
+} from "@/lib/text-overlay/types";
+import type { OrderFields } from "@/lib/db/schema";
+
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_FIELD_LEN = 200;
+
+const FIELD_KEYS: Array<keyof OrderFields> = [
+  "honoree",
+  "event",
+  "date",
+  "time",
+  "location",
+  "customLine",
+];
+
+function fail(status: number, error: string) {
+  return Response.json({ error }, { status });
+}
+
+function validateFields(raw: unknown): OrderFields | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const out: Partial<OrderFields> = {};
+  for (const key of FIELD_KEYS) {
+    const v = r[key];
+    if (v === undefined || v === null || v === "") {
+      out[key] = "";
+      continue;
+    }
+    if (typeof v !== "string") return null;
+    if (v.length > MAX_FIELD_LEN) return null;
+    out[key] = v;
+  }
+  return out as OrderFields;
+}
+
+function originFromRequest(req: Request): string {
+  const fwdHost = req.headers.get("x-forwarded-host");
+  const fwdProto = req.headers.get("x-forwarded-proto") ?? "https";
+  if (fwdHost) return `${fwdProto}://${fwdHost}`;
+  return new URL(req.url).origin;
+}
+
+export async function POST(req: Request) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return fail(400, "invalid json");
+  }
+
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const winnerCard = b.winnerCard as Record<string, unknown> | undefined;
+  if (!winnerCard) return fail(400, "winnerCard required");
+
+  const imageB64 = winnerCard.imageB64;
+  if (typeof imageB64 !== "string" || imageB64.length === 0) {
+    return fail(400, "winnerCard.imageB64 required");
+  }
+  if (Math.floor((imageB64.length * 3) / 4) > MAX_IMAGE_BYTES) {
+    return fail(413, "image too large");
+  }
+
+  const winnerIndexRaw = winnerCard.index;
+  const winnerIndex =
+    typeof winnerIndexRaw === "number" && Number.isFinite(winnerIndexRaw)
+      ? winnerIndexRaw
+      : 0;
+
+  const layout = isLayoutId(winnerCard.layout) ? winnerCard.layout : DEFAULT_LAYOUT;
+  const fontStack = isFontStackId(winnerCard.fontStack)
+    ? winnerCard.fontStack
+    : DEFAULT_FONT_STACK;
+
+  const fields = validateFields(b.fields);
+  if (!fields) return fail(400, "invalid fields");
+
+  const priceId = process.env.STRIPE_PRICE_ID;
+  if (!priceId) {
+    logger.error("checkout.missing_price_id");
+    return fail(500, "checkout misconfigured");
+  }
+
+  let order: Awaited<ReturnType<typeof createOrder>>;
+  try {
+    order = await createOrder({
+      winnerIndex,
+      fields,
+      imageB64,
+      layout,
+      fontStack,
+    });
+  } catch (err) {
+    logger.error("checkout.create_order_failed", { err });
+    return fail(500, "could not create order");
+  }
+
+  const origin = originFromRequest(req);
+
+  try {
+    const session = await getStripe().checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: order.id,
+      metadata: { orderId: order.id },
+      success_url: `${origin}/paid?orderId=${order.id}`,
+      cancel_url: `${origin}/?checkout=canceled`,
+      payment_intent_data: {
+        metadata: { orderId: order.id },
+      },
+      automatic_tax: { enabled: false },
+    });
+
+    if (!session.url) {
+      logger.error("checkout.no_session_url", { orderId: order.id });
+      return fail(500, "stripe returned no checkout url");
+    }
+
+    await attachStripeSession(order.id, session.id);
+
+    logger.info("checkout.created", {
+      orderId: order.id,
+      sessionId: session.id,
+      pricedAt: PRICE_USD_CENTS,
+    });
+
+    return Response.json({ url: session.url, orderId: order.id });
+  } catch (err) {
+    logger.error("checkout.stripe_failed", {
+      err,
+      orderId: order.id,
+    });
+    return fail(502, "stripe error");
+  }
+}

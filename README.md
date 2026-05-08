@@ -33,10 +33,37 @@ AGENTS.md             Evidence requirements for completed work
 
 ```bash
 cd apps/web
-cp .env.local.example .env.local   # paste your OPENAI_API_KEY
+cp .env.local.example .env.local   # fill in OpenAI, Stripe, Resend, Neon keys
 bun install
 bun dev                            # http://localhost:3001
 ```
+
+For payment testing, in a second terminal:
+
+```bash
+stripe listen --forward-to localhost:3001/api/v1/webhooks/stripe
+# copy the whsec_… into .env.local as STRIPE_WEBHOOK_SECRET, then restart dev
+```
+
+### One-time setup (before first payment)
+
+1. **Neon Postgres** — create a project at neon.tech, paste the pooled connection string into `DATABASE_URL`, then:
+   ```bash
+   cd apps/web && bunx drizzle-kit migrate
+   ```
+2. **Stripe price** — create the $10 invite Price (test mode):
+   ```bash
+   stripe prices create \
+     --product-data[name]="Custom invite" \
+     --unit-amount=1000 --currency=usd
+   # paste the returned `price_…` id into STRIPE_PRICE_ID
+   ```
+3. **Resend** — sign up, generate an API key, paste into `RESEND_API_KEY`. Use `onboarding@resend.dev` as `RESEND_FROM` until your sending domain is verified.
+4. **APP_URL** — set this to whatever the browser sees as your origin. Local: `http://localhost:3001`. Vercel previews: the assigned `https://<branch>-<proj>.vercel.app`. Production: your purchased domain. Magic-link emails (sent from the Stripe webhook) construct absolute URLs from this.
+
+### Post-purchase access
+
+After payment we email a magic link to `/invite/[id]?token=…` so users can come back, edit text, re-render, and re-download without an account. If they lose the email, `/recover` accepts an email address and re-sends links for every fulfilled order tied to that address.
 
 Other scripts (run from `apps/web/`):
 
@@ -46,6 +73,8 @@ Other scripts (run from `apps/web/`):
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run build` | Next.js production build |
 | `bun run evidence:capture` | Playwright screenshots / video for PR evidence |
+| `bunx drizzle-kit generate` | Generate a new Postgres migration from `lib/db/schema.ts` |
+| `bunx drizzle-kit migrate` | Apply pending migrations to `DATABASE_URL` |
 
 ## Deploying
 

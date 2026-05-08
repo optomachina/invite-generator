@@ -7,6 +7,7 @@ import { SwipeStack, type SwipeRoundResult } from "@/app/components/SwipeStack";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 import { RoundCompletePanel } from "@/app/components/RoundCompletePanel";
 import { ComparePayScreen, pickInitialKeptId } from "@/app/components/ComparePayScreen";
+import { StoredInvitesPill } from "@/app/components/StoredInvitesPill";
 import type { ComparePayFields } from "@/app/components/EditTextForm";
 import { b64ToObjectUrl } from "@/lib/image";
 import { estimateCostUsd, type Model, type Quality, type Settings, type Size } from "@/lib/pricing";
@@ -118,10 +119,11 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [sessionKey, setSessionKey] = useState(0);
   const [roundResult, setRoundResult] = useState<SwipeRoundResult | null>(null);
-  const [phase, setPhase] = useState<"swipe" | "round-complete" | "compare-pay" | "paid-stub">("swipe");
+  const [phase, setPhase] = useState<"swipe" | "round-complete" | "compare-pay">("swipe");
   const [compareSelectedId, setCompareSelectedId] = useState<string | null>(null);
   const [compareFields, setCompareFields] = useState<ComparePayFields | null>(null);
-  const [paidWinner, setPaidWinner] = useState<{ card: SwipeCardData; fields: ComparePayFields } | null>(null);
+  const [checkoutPending, setCheckoutPending] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -237,7 +239,8 @@ export default function Page() {
     setRoundResult(null);
     setCompareSelectedId(null);
     setCompareFields(null);
-    setPaidWinner(null);
+    setCheckoutPending(false);
+    setCheckoutError(null);
     setPhase("swipe");
   }
 
@@ -254,7 +257,8 @@ export default function Page() {
     setPhase("swipe");
     setCompareSelectedId(null);
     setCompareFields(null);
-    setPaidWinner(null);
+    setCheckoutPending(false);
+    setCheckoutError(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -305,11 +309,14 @@ export default function Page() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <header className="mb-8">
-        <h1 className="font-serif text-4xl tracking-tight">Invite — slice 0</h1>
-        <p className="mt-2 text-sm text-ink/70">
-          Multi-variant streaming prototype with a Tinder-style review stack.
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-4xl tracking-tight">Invite — slice 0</h1>
+          <p className="mt-2 text-sm text-ink/70">
+            Multi-variant streaming prototype with a Tinder-style review stack.
+          </p>
+        </div>
+        <StoredInvitesPill />
       </header>
 
       <section className="mb-8 rounded-lg border border-ink/10 bg-white/40 p-5">
@@ -543,35 +550,47 @@ export default function Page() {
           onFieldsChange={setCompareFields}
           onSelect={setCompareSelectedId}
           onBack={() => setPhase("round-complete")}
-          onPay={(winner, fields) => {
-            setPaidWinner({ card: winner, fields });
-            setPhase("paid-stub");
+          onPay={async (winner, fields) => {
+            if (checkoutPending) return;
+            setCheckoutPending(true);
+            setCheckoutError(null);
+            try {
+              const res = await fetch("/api/v1/checkout", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  winnerCard: {
+                    index: winner.index,
+                    imageB64: winner.imageB64,
+                    layout: winner.layout,
+                    fontStack: winner.fontStack,
+                  },
+                  fields,
+                }),
+              });
+              if (!res.ok) {
+                const text = await res.text().catch(() => "");
+                throw new Error(text || `checkout failed: ${res.status}`);
+              }
+              const data = (await res.json()) as { url: string };
+              window.location.assign(data.url);
+            } catch (err) {
+              setCheckoutError(err instanceof Error ? err.message : String(err));
+              setCheckoutPending(false);
+            }
           }}
         />
       )}
 
-      {phase === "paid-stub" && paidWinner && (
-        <section className="rounded-[2rem] border border-ink/10 bg-[#fffaf2] p-6 text-center shadow-[0_24px_80px_rgba(68,40,16,0.14)] sm:p-8">
-          <h2 className="font-serif text-3xl text-ink">Checkout flow coming soon</h2>
-          <p className="mt-2 text-sm text-ink/70">
-            We captured <span className="font-medium">Concept {paidWinner.card.index + 1}</span>
-            {" "}for {paidWinner.fields.honoree}&apos;s {paidWinner.fields.event}.
-            Real payment + share page is the next ship.
-          </p>
-          {paidWinner.card.imageUrl && (
-            <div className="mx-auto mt-4 max-w-xs overflow-hidden rounded-[1.5rem] border border-ink/10">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={paidWinner.card.imageUrl} alt={`Concept ${paidWinner.card.index + 1}`} className="h-full w-full object-cover" />
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={resetToSwipe}
-            className="mt-6 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-cream transition hover:bg-ink/90"
-          >
-            Start a new round
-          </button>
-        </section>
+      {checkoutError && (
+        <p role="alert" className="mt-4 text-center text-sm text-red-700">
+          Checkout error: {checkoutError}
+        </p>
+      )}
+      {checkoutPending && (
+        <p className="mt-4 text-center text-sm text-ink/70">
+          Redirecting to checkout…
+        </p>
       )}
     </main>
   );

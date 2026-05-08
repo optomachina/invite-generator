@@ -197,6 +197,24 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 ---
 
+## Ops
+
+### OPS.1. Rotate Stripe API keys before 2026-06-09
+
+**What:** Both live + test Stripe API keys on Overdraft Inc. (`acct_1OuKXaKchTJzDiFQ`) expire 2026-06-09. Rotate before that date — generate new restricted live key + test key in Stripe dashboard, update `STRIPE_SECRET_KEY` in Vercel envs (production + preview + development scopes), update `~/.config/stripe/config.toml` for local CLI, redeploy.
+
+**Why:** Hard deadline. If keys expire mid-launch the checkout endpoint will start returning auth errors and paid conversions stop until rotated. Discovered while scoping the Stripe Checkout build (2026-05-07).
+
+**Pros:** Prevents a self-inflicted outage during the validation cohort window.
+
+**Cons:** Brief test-mode reverification needed after rotation (run `stripe trigger checkout.session.completed` against the new whsec).
+
+**Context:** `stripe config --list` shows `live_mode_key_expires_at = '2026-06-09'` and `test_mode_key_expires_at = '2026-06-09'`. Restricted keys (`rk_live_…`) only — never store unrestricted secrets in env. The webhook secret (`whsec_…`) does not expire on the same cadence; only rotate it if compromised.
+
+**Depends on:** Stripe Checkout shipping (so the rotation actually has something to break). Schedule rotation for ~2026-05-25 to leave a 2-week buffer.
+
+---
+
 ## Done
 
 ### ~~P1. Verify RTK installation~~ ✓ 2026-04-26
