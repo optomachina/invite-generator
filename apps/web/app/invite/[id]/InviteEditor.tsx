@@ -58,6 +58,21 @@ async function fetchRender(
   return data.imageB64;
 }
 
+type EmailStatus = "idle" | "sending" | "sent" | "error";
+
+function resendButtonLabel(status: EmailStatus): string {
+  switch (status) {
+    case "sending":
+      return "Sending…";
+    case "sent":
+      return "Email sent";
+    case "error":
+      return "Try again";
+    default:
+      return "Email me this version";
+  }
+}
+
 function fieldsKey(f: ComparePayFields): string {
   return [f.honoree, f.event, f.date, f.time, f.location, f.customLine].join(
     "",
@@ -78,9 +93,7 @@ export function InviteEditor({
   const [imageB64, setImageB64] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
-  const [emailStatus, setEmailStatus] = useState<
-    "idle" | "sending" | "sent" | "error"
-  >("idle");
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
   const lastKey = useRef<string>("");
   const persistedRef = useRef(false);
 
@@ -261,13 +274,7 @@ export function InviteEditor({
           disabled={emailStatus === "sending" || !imageB64}
           className="rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {emailStatus === "sending"
-            ? "Sending…"
-            : emailStatus === "sent"
-              ? "Email sent"
-              : emailStatus === "error"
-                ? "Try again"
-                : "Email me this version"}
+          {resendButtonLabel(emailStatus)}
         </button>
       </div>
     </section>

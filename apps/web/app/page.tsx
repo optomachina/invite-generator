@@ -573,11 +573,13 @@ export default function Page() {
                 throw new Error(text || `checkout failed: ${res.status}`);
               }
               const data = (await res.json()) as { url: string };
-              const parsed = new URL(data.url);
-              if (parsed.host !== "checkout.stripe.com") {
-                throw new Error(`refusing redirect to ${parsed.host}`);
+              if (
+                typeof data.url !== "string" ||
+                !data.url.startsWith("https://checkout.stripe.com/")
+              ) {
+                throw new Error("invalid checkout url");
               }
-              window.location.assign(parsed.toString());
+              window.location.assign(data.url);
             } catch (err) {
               setCheckoutError(err instanceof Error ? err.message : String(err));
               setCheckoutPending(false);

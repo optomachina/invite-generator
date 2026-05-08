@@ -3,6 +3,8 @@
 
 # Claude Code local settings (per-machine, not shared)
 .claude/settings.local.json
+# Claude Code runtime lock — regenerated each session, not meant to be tracked
+.claude/scheduled_tasks.lock
 
 # gstack session state (local logs, browse audit)
 .gstack/
