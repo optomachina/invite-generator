@@ -124,8 +124,16 @@ export default function Page() {
   const [compareFields, setCompareFields] = useState<ComparePayFields | null>(null);
   const [checkoutPending, setCheckoutPending] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutGoHref, setCheckoutGoHref] = useState<string | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  const checkoutGoRef = useRef<HTMLAnchorElement | null>(null);
+
+  useEffect(() => {
+    if (checkoutGoHref && checkoutGoRef.current) {
+      checkoutGoRef.current.click();
+    }
+  }, [checkoutGoHref]);
 
   const estCost = useMemo(() => estimateCostUsd(settings), [settings]);
   const readyCount = cards.filter((card) => card.status === "ready").length;
@@ -241,6 +249,7 @@ export default function Page() {
     setCompareFields(null);
     setCheckoutPending(false);
     setCheckoutError(null);
+    setCheckoutGoHref(null);
     setPhase("swipe");
   }
 
@@ -259,6 +268,7 @@ export default function Page() {
     setCompareFields(null);
     setCheckoutPending(false);
     setCheckoutError(null);
+    setCheckoutGoHref(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -579,11 +589,7 @@ export default function Page() {
               ) {
                 throw new Error("invalid orderId");
               }
-              // NOSONAR: target is a same-origin internal path with a constant
-              // prefix and a UUID-validated segment; the Stripe URL itself is
-              // resolved server-side by the /go redirect endpoint and never
-              // touches the client.
-              window.location.assign(`/api/v1/checkout/${data.orderId}/go`); // NOSONAR
+              setCheckoutGoHref(`/api/v1/checkout/${data.orderId}/go`);
             } catch (err) {
               setCheckoutError(err instanceof Error ? err.message : String(err));
               setCheckoutPending(false);
@@ -601,6 +607,17 @@ export default function Page() {
         <p className="mt-4 text-center text-sm text-ink/70">
           Redirecting to checkout…
         </p>
+      )}
+      {checkoutGoHref && (
+        <a
+          ref={checkoutGoRef}
+          href={checkoutGoHref}
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+        >
+          continue
+        </a>
       )}
     </main>
   );
