@@ -16,7 +16,29 @@ type StatusResponse = {
 const POLL_MS = 1500;
 const SLOW_AFTER_MS = 30_000;
 
-export function PaidPoll({ orderId }: { orderId: string }) {
+type PollResult =
+  | { kind: "ok"; data: StatusResponse; done: boolean }
+  | { kind: "http"; status: number }
+  | { kind: "error"; message: string };
+
+async function fetchStatus(orderId: string): Promise<PollResult> {
+  try {
+    const res = await fetch(`/api/v1/orders/${orderId}/status`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return { kind: "http", status: res.status };
+    const data = (await res.json()) as StatusResponse;
+    const done = data.status === "fulfilled" || data.status === "failed";
+    return { kind: "ok", data, done };
+  } catch (err) {
+    return {
+      kind: "error",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+export function PaidPoll({ orderId }: Readonly<{ orderId: string }>) {
   const [data, setData] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -40,24 +62,25 @@ export function PaidPoll({ orderId }: { orderId: string }) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const tick = async () => {
-      try {
-        const res = await fetch(`/api/v1/orders/${orderId}/status`, {
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          setError(`status ${res.status}`);
-        } else {
-          const json = (await res.json()) as StatusResponse;
-          if (cancelled) return;
-          setData(json);
-          setError(null);
-          if (json.status === "fulfilled" || json.status === "failed") return;
-        }
-      } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : String(err));
+    const applyResult = (result: PollResult): boolean => {
+      if (result.kind === "http") {
+        setError(`status ${result.status}`);
+        return false;
       }
+      if (result.kind === "error") {
+        setError(result.message);
+        return false;
+      }
+      setData(result.data);
+      setError(null);
+      return result.done;
+    };
+
+    const tick = async () => {
+      const result = await fetchStatus(orderId);
+      if (cancelled) return;
+      const done = applyResult(result);
+      if (done) return;
       setElapsed(Date.now() - startedAt.current);
       timer = setTimeout(tick, POLL_MS);
     };

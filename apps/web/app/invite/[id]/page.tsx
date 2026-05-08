@@ -10,7 +10,7 @@ type InvitePageProps = {
 export default async function InvitePage({
   params,
   searchParams,
-}: InvitePageProps) {
+}: Readonly<InvitePageProps>) {
   const { id } = await params;
   const { token } = await searchParams;
 

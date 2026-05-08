@@ -6,7 +6,9 @@ type PaidPageProps = {
   searchParams: Promise<{ orderId?: string }>;
 };
 
-export default async function PaidPage({ searchParams }: PaidPageProps) {
+export default async function PaidPage({
+  searchParams,
+}: Readonly<PaidPageProps>) {
   const { orderId } = await searchParams;
 
   if (!orderId) {

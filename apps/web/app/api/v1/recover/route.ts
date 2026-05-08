@@ -5,7 +5,14 @@ import { manageUrlFor } from "@/lib/urls";
 
 export const runtime = "nodejs";
 
-const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function looksLikeEmail(s: string): boolean {
+  if (s.length < 3 || s.length > 200) return false;
+  const at = s.indexOf("@");
+  if (at <= 0 || at !== s.lastIndexOf("@")) return false;
+  const dot = s.lastIndexOf(".");
+  if (dot < at + 2 || dot >= s.length - 1) return false;
+  return !/\s/.test(s);
+}
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -16,7 +23,7 @@ export async function POST(req: Request) {
   }
   const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
   const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
-  if (!email || !EMAIL_RX.test(email) || email.length > 200) {
+  if (!looksLikeEmail(email)) {
     return Response.json({ error: "invalid email" }, { status: 400 });
   }
 

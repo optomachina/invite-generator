@@ -56,7 +56,7 @@ describe("upsertInvite", () => {
     const result = upsertInvite(initial, { ...sample, id: "new" });
     expect(result).toHaveLength(50);
     expect(result[0].id).toBe("new");
-    expect(result[result.length - 1].id).toBe("id-48");
+    expect(result.at(-1)?.id).toBe("id-48");
   });
 });
 

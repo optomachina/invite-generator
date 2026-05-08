@@ -573,7 +573,11 @@ export default function Page() {
                 throw new Error(text || `checkout failed: ${res.status}`);
               }
               const data = (await res.json()) as { url: string };
-              window.location.assign(data.url);
+              const parsed = new URL(data.url);
+              if (parsed.host !== "checkout.stripe.com") {
+                throw new Error(`refusing redirect to ${parsed.host}`);
+              }
+              window.location.assign(parsed.toString());
             } catch (err) {
               setCheckoutError(err instanceof Error ? err.message : String(err));
               setCheckoutPending(false);

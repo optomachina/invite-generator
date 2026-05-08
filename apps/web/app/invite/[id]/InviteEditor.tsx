@@ -18,6 +18,46 @@ type OrderResponse = {
 
 const DEBOUNCE_MS = 350;
 
+type LoadResult =
+  | { kind: "ok"; data: OrderResponse }
+  | { kind: "not-found" }
+  | { kind: "transient" };
+
+async function loadOrder(orderId: string, token: string): Promise<LoadResult> {
+  try {
+    const res = await fetch(
+      `/api/v1/orders/${orderId}?token=${encodeURIComponent(token)}`,
+      { cache: "no-store" },
+    );
+    if (res.status === 404) return { kind: "not-found" };
+    if (!res.ok) return { kind: "transient" };
+    const data = (await res.json()) as OrderResponse;
+    return { kind: "ok", data };
+  } catch {
+    return { kind: "transient" };
+  }
+}
+
+async function fetchRender(
+  orderId: string,
+  token: string,
+  fields: ComparePayFields,
+  signal: AbortSignal,
+): Promise<string> {
+  const res = await fetch(`/api/v1/orders/${orderId}/render`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ token, fields }),
+    signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `render ${res.status}`);
+  }
+  const data = (await res.json()) as { imageB64: string };
+  return data.imageB64;
+}
+
 function fieldsKey(f: ComparePayFields): string {
   return [f.honoree, f.event, f.date, f.time, f.location, f.customLine].join(
     "",
@@ -27,10 +67,10 @@ function fieldsKey(f: ComparePayFields): string {
 export function InviteEditor({
   orderId,
   token,
-}: {
+}: Readonly<{
   orderId: string;
   token: string;
-}) {
+}>) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [waitingForFulfillment, setWaitingForFulfillment] = useState(false);
@@ -46,47 +86,49 @@ export function InviteEditor({
 
   useEffect(() => {
     let cancelled = false;
-    const tick = async () => {
-      try {
-        const res = await fetch(
-          `/api/v1/orders/${orderId}?token=${encodeURIComponent(token)}`,
-          { cache: "no-store" },
-        );
-        if (res.status === 404) {
-          if (!cancelled) {
-            setNotFound(true);
-            setLoading(false);
-          }
-          return;
-        }
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const data = (await res.json()) as OrderResponse;
-        if (cancelled) return;
-        setFields(data.fields);
-        setImageB64(data.finalImageB64);
-        lastKey.current = fieldsKey(data.fields);
-        if (data.status !== "fulfilled") {
-          setWaitingForFulfillment(true);
-          setTimeout(tick, 1500);
-        } else {
-          setWaitingForFulfillment(false);
-          if (!persistedRef.current) {
-            persistedRef.current = true;
-            saveStoredInvite({
-              id: orderId,
-              accessToken: token,
-              honoree: data.fields.honoree,
-              event: data.fields.event,
-              fulfilledAt: new Date().toISOString(),
-            });
-          }
-        }
-        setLoading(false);
-      } catch {
-        if (cancelled) return;
-        setTimeout(tick, 2000);
-      }
+
+    const persistOnFulfilled = (data: OrderResponse) => {
+      if (persistedRef.current) return;
+      persistedRef.current = true;
+      saveStoredInvite({
+        id: orderId,
+        accessToken: token,
+        honoree: data.fields.honoree,
+        event: data.fields.event,
+        fulfilledAt: new Date().toISOString(),
+      });
     };
+
+    const apply = (data: OrderResponse): boolean => {
+      setFields(data.fields);
+      setImageB64(data.finalImageB64);
+      lastKey.current = fieldsKey(data.fields);
+      setLoading(false);
+      if (data.status === "fulfilled") {
+        setWaitingForFulfillment(false);
+        persistOnFulfilled(data);
+        return true;
+      }
+      setWaitingForFulfillment(true);
+      return false;
+    };
+
+    const tick = async () => {
+      const result = await loadOrder(orderId, token);
+      if (cancelled) return;
+      if (result.kind === "not-found") {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      if (result.kind === "transient") {
+        setTimeout(tick, 2000);
+        return;
+      }
+      const fulfilled = apply(result.data);
+      if (!fulfilled) setTimeout(tick, 1500);
+    };
+
     void tick();
     return () => {
       cancelled = true;
@@ -97,31 +139,24 @@ export function InviteEditor({
     if (!fields) return;
     const key = fieldsKey(fields);
     if (key === lastKey.current) return;
+
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
+    const runRender = async () => {
       lastKey.current = key;
       setRendering(true);
       setRenderError(null);
       try {
-        const res = await fetch(`/api/v1/orders/${orderId}/render`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ token, fields }),
-          signal: controller.signal,
-        });
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          throw new Error(text || `render ${res.status}`);
-        }
-        const data = (await res.json()) as { imageB64: string };
-        setImageB64(data.imageB64);
+        const next = await fetchRender(orderId, token, fields, controller.signal);
+        setImageB64(next);
       } catch (err) {
         if (controller.signal.aborted) return;
         setRenderError(err instanceof Error ? err.message : String(err));
       } finally {
         if (!controller.signal.aborted) setRendering(false);
       }
-    }, DEBOUNCE_MS);
+    };
+
+    const timer = setTimeout(() => void runRender(), DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
       controller.abort();

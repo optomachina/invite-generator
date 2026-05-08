@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger";
+import { validateOrderFields } from "@/lib/order-fields";
 import {
   getOrderByIdAndToken,
   updateFieldsAndImage,
@@ -9,41 +10,13 @@ import {
   DEFAULT_LAYOUT,
   isFontStackId,
   isLayoutId,
-  type OverlayFields,
 } from "@/lib/text-overlay/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const MAX_FIELD_LEN = 200;
-const FIELD_KEYS: Array<keyof OverlayFields> = [
-  "honoree",
-  "event",
-  "date",
-  "time",
-  "location",
-  "customLine",
-];
-
 function fail(status: number, error: string) {
   return Response.json({ error }, { status });
-}
-
-function validateFields(raw: unknown): OverlayFields | null {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as Record<string, unknown>;
-  const out: Partial<OverlayFields> = {};
-  for (const key of FIELD_KEYS) {
-    const v = r[key];
-    if (v === undefined || v === null || v === "") {
-      out[key] = "";
-      continue;
-    }
-    if (typeof v !== "string") return null;
-    if (v.length > MAX_FIELD_LEN) return null;
-    out[key] = v;
-  }
-  return out as OverlayFields;
 }
 
 export async function POST(
@@ -64,7 +37,7 @@ export async function POST(
   const order = await getOrderByIdAndToken(id, token);
   if (!order) return fail(404, "not found");
 
-  const fields = validateFields(b.fields);
+  const fields = validateOrderFields(b.fields);
   if (!fields) return fail(400, "invalid fields");
 
   const layout = isLayoutId(order.layout) ? order.layout : DEFAULT_LAYOUT;
