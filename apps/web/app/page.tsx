@@ -579,7 +579,11 @@ export default function Page() {
               ) {
                 throw new Error("invalid orderId");
               }
-              window.location.assign(`/api/v1/checkout/${data.orderId}/go`);
+              // NOSONAR: target is a same-origin internal path with a constant
+              // prefix and a UUID-validated segment; the Stripe URL itself is
+              // resolved server-side by the /go redirect endpoint and never
+              // touches the client.
+              window.location.assign(`/api/v1/checkout/${data.orderId}/go`); // NOSONAR
             } catch (err) {
               setCheckoutError(err instanceof Error ? err.message : String(err));
               setCheckoutPending(false);
