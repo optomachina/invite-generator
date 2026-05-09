@@ -2,198 +2,323 @@
 
 Build queue, organized by phase. Each entry captures what, why, pros, cons, context, and dependencies so the reasoning survives when you come back to this in 3 months.
 
-For non-engineering work (validation cohorts, kill criteria, pricing tests, ethics-gated features), see [STRATEGY.md](STRATEGY.md).
+For horizon-level roadmap (V1.x / V2 / V3+ / V4+), see [ROADMAP.md](ROADMAP.md). For non-engineering work (validation cohorts, kill criteria, pricing tests, ethics-gated features), see [STRATEGY.md](STRATEGY.md).
+
+**Strategic stance (2026-05-09):** iOS-first. Native iOS app is the primary creation surface. Web is fallback / purchase entry / Android share target. Net-new feature work goes iOS-first.
 
 ---
 
-## v1 (ship-blocking)
+## V1.x web — closing out
 
-### V1.1. Voice-input feature flag + cost kill-switch — DONE (lean MVP)
+Web is in maintenance mode. No net-new feature work; only the items below.
 
-**Shipped:** Lean MVP of the gate. PostHog/Postgres/Sentry deferred until those vendors are picked at the project level — the gate works without them and can be swapped in cleanly.
+### V1.4. Intake: tap-and-hold mic + visible event-type chips — DEFERRED to iOS
 
-- `apps/web/lib/voice-gate.ts` — env-var flag `VOICE_ENABLED` + rolling 24h spend ceiling (`VOICE_COST_WARN_USD`, default 40; `VOICE_COST_KILL_USD`, default 50). Pluggable `UsageStore` interface; in-memory implementation ships now, swap to Upstash Redis or Postgres before voice goes to scale (Vercel serverless = multi-instance, in-memory only protects a single hot instance).
-- `apps/web/app/api/v1/transcribe/route.ts` — stub. 503 `voice_disabled` when gated, 501 `not_implemented` when enabled. Real transcription is a future TODO.
-- `apps/web/app/api/v1/voice-status/route.ts` + `apps/web/app/hooks/useVoiceEnabled.ts` — UI fallback path: hook returns `enabled=false` whenever the gate is closed, so future voice UI silently reverts to text-only.
-- Budget crossings emit Sentry-shaped warn/error logs (`voice.budget.warn`, `voice.budget.killed`) ready to be promoted to alerts when `@sentry/nextjs` lands.
+**Status:** Web implementation deferred per iOS-first pivot (2026-05-09). Lands as V2.3 on iOS using on-device `SFSpeechRecognizer` (free, zero-latency, no transcribe API). Web keeps current text-only intake as fallback.
 
-**Follow-ups before voice ships at scale:**
-- Pick a shared `UsageStore` (Upstash Redis is the path of least resistance) so the kill-switch is correct across instances.
-- Wire PostHog so the flag can be flipped without a redeploy.
-- Wire Sentry so `voice.budget.*` warns/errors page someone.
+**Why deferred:** With iOS-first, spending dev cycles on web voice doesn't pencil — iOS speech recognition is free and lower-latency than the gpt-4o-mini-transcribe path the web version would have used. The V1.1 cost kill-switch was scaffolding for the web version; the iOS version doesn't need it.
+
+**Context preserved for V2.3:** 7 chips visible by default (the 6 most common event types + "Other"). Long-press on textbox starts recording with visible waveform + timer; release stops + transcribes + appends (does not replace).
 
 ---
 
-### V1.2. Thinking-notes template library expansion ✅ initial 40 shipped 2026-04-26
+### V1.6. User-editable text UI on the compare screen — VERIFY
 
-**Status:** Initial 40 templates + renderer landed at `apps/web/lib/thinking-notes/{templates,render}.ts` (path moved from `packages/thinking-notes/` since the project is single-app). 20 hand-written + 20 from codex (gpt-5.4 reasoning:high). Loading-expressions reference at `.context/loading-expressions-reference.md` audits against Claude Code spinner verbs — zero overlap. Week-3 expansion to 80 still pending Mrs. W beta feedback.
+**Status:** UI shipped in PR #14 (2026-05-01); renderer shipped in V1.7 (2026-05-05). Need to verify the integration is wired end-to-end. If yes → move to Done. If gaps remain → close them as the final V1 web fix.
 
-**What:** Start v1 with 40 canned+interpolated note templates in `packages/thinking-notes/templates.ts`. Expand to 80 templates by week 3 based on Mrs. W's repetition feedback from beta usage. Each template is `{ id: string, text_template: string, context_requires: Array<"name" | "event" | null> }` so the renderer picks only templates where the required context fields are filled.
+**What:** Edit form on compare screen for honoree name, date, time, address, custom line. Server re-renders text overlay on paid concepts via the V1.7 pipeline.
 
-**Why:** Codex outside voice warned during /plan-eng-review 2026-04-22 that the beta cohort (Mrs. W, same user running the flow 10+ times) will notice repetition fast. 40 notes at ~4-6s rotation over a 60s generating window = ~12 notes per session = repetition begins by session 4. 80 templates extends the non-repetition ceiling to ~7 sessions, covering the critical week-1 to week-3 beta window without a vendor swap to LLM-generated notes.
+**Why:** Parser extraction is ~80% accurate. Edit UI turns a $7 refund into a 2-second re-render. Trust win that protects paid conversion in the week-3 kill-criteria window.
 
-**Pros:** Better beta experience without adding an LLM dependency to the anxiety-peak wait screen. Defers the decision about LLM-generated notes until post-validation data supports it. Copywriting is fast with Claude (~4 hours for 40 more).
+**Pros:** Massive retention + trust win. Near-zero engineering cost since renderer is done.
 
-**Cons:** ~4 hours of copywriting. Slight maintenance burden (one file to curate).
+**Cons:** Form-validation surface to verify.
 
-**Context:** Templates live in `packages/thinking-notes/templates.ts`. Renderer is pure function: `render(template, intake_context) => string`. Server interpolates once at generation start, sends all notes in a single `generation.state` blob the client can refetch on reconnect (per Codex's SSE replay concern). Expansion is purely additive — adding 40 more templates doesn't change the renderer or the API contract.
+**Context:** Code-overlay typography (V1.7) makes text data — re-rendering with different strings is a fast server round-trip. Field set: honoree name, date, time, location, honoree age, custom line.
 
-**Depends on:** v1 shipping with the initial 40. Week-3 retro checks if Mrs. W flagged repetition.
-
----
-
-### V1.3. Tinder-style L/R swipe gestures (non-optional per Mrs. W) ✅ shipped 2026-04-30 (web)
-
-**Shipped:**
-- `apps/web/lib/swipe.ts` — pure logic: `shouldCommit(offset, velocity)` (80px or 0.5 velocity), `computeTilt`/`computePeekOpacity`/`computeStampOpacity`, `pushDismissed`/`popDismissed` for undo, `progressFraction`. 22 tests.
-- `apps/web/app/components/SwipeStack.tsx` — drag with live tilt (±15° at 160px) + opacity peek (down to 0.6) wired via `useMotionValue`/`useTransform`. Spring snap-back via `dragSnapToOrigin` below threshold. Green KEEP / red PASS stamps fade in with drag. Circular X/heart action buttons + center undo button as non-swiper fallback. 4-dot progress indicator above the stack with `role="progressbar"`. Exit animation: card flies off (480px) with 18° rotation. iOS port deferred until iOS app exists.
-
-**What:** Replace tap-to-choose on the swipe screen with full Tinder-style card-stack physics: drag with tilt+opacity peek, snap-back on weak swipes, decisive L/R commits the keep/discard, undo button, 4-dot progress dots, circular X/heart buttons under the stack as a non-swiper fallback. Both web and iOS.
-
-**Why:** Mrs. W explicit ask in 2026-04-22 design review: tap-to-choose breaks the mental model the "swipe" word promises. The swipe metaphor is the core mechanic of this product — getting it wrong is shipping a different product than the one we pitched. She called this non-optional, not a preference.
-
-**Pros:** Matches the mental model the product name implies. Tactile feedback is what makes the "fun" of generation land. Non-swiper fallback (X/heart buttons) keeps it accessible.
-
-**Cons:** ~1 day of UI work on web (framer-motion or react-tinder-card). iOS gets it close to free with native gesture system. Adds gesture-tuning surface (thresholds, easings) that needs to feel right or it feels broken.
-
-**Context:** Currently the design doc lists the swipe screen with "tap-to-choose" semantics. This TODO upgrades it to gesture-first with tap fallback. Spec: drag threshold ~80px or velocity >0.5; tilt up to 15° at threshold; opacity to 0.6 at threshold; snap-back below threshold with spring; success animation = card flies off screen + green keep stamp on right, red X on left. Non-swiper buttons trigger the same animations.
-
-**Depends on:** Swipe screen being built. This is v1, not deferred.
+**Depends on:** V1.7 ✅ shipped 2026-05-05.
 
 ---
 
-### V1.4. Intake: tap-and-hold mic + visible event-type chips
+## V2 iOS native app
 
-**What:** Unify the intake into one input that accepts both typing and voice. Long-press on the textbox or its embedded mic icon dictates into the same field (no separate voice/text mode toggle). Show event-type chips as empty-state helpers (birthday, baby shower, graduation, gender reveal, milestone, wedding, other) — tapping a chip seeds the textbox with a starter phrase. "Or use fields" stays as an escape hatch but the hybrid is the default.
+Net-new development priority. Reuses existing backend as the shared service layer.
 
-**Why:** Two findings from 2026-04-22 design review with Mrs. W. (1) The "second mic icon in the textbox" reads as redundant — make it one unified affordance. (2) Empty input feels unguided; visible chips give the user permission to "focus on the right answer." Even users who could verbally answer benefit from seeing the answer space first.
+### V2.1. iOS app scaffolding + magic-link auth
 
-**Pros:** Removes a decision (voice vs text) the user shouldn't have to make. Chips lower the activation energy on a blank textbox — the #1 conversion killer on intake screens. Both feedback items resolved with one screen iteration.
+**What:** Xcode project (SwiftUI, iOS 17+), Apple Developer Program enrollment, app ID + provisioning profiles, magic-link sign-in via universal links, REST client for existing Next.js API routes (`/api/v1/events/parse`, generation, render-text, etc.).
 
-**Cons:** ~half a day of UI work. Tap-and-hold gesture needs visual feedback (recording indicator, waveform, release-to-stop) — easy to ship a janky version. Chips list needs curation; too many = clutter, too few = the user's event type is missing.
+**Why:** iOS-first pivot (2026-05-09) makes the native app the primary creation surface. Reusing the existing backend means the iOS app is a thin native client, not a rebuild — ~4-6 weeks of focused Swift work.
 
-**Context:** Voice transcription path covered by V1.1 (PostHog flag + cost kill-switch). This TODO is about the UI affordance, not the backend. Recommended: 7 chips visible by default (the 6 most common event types + "Other"). Long-press on textbox starts recording with visible waveform + timer; release stops + transcribes + appends to existing text (does not replace).
+**Pros:** Greenfield Swift project with tight scope. Reuses all backend infra. Magic-link auth means no Sign-in-with-Apple complexity in v1.
 
-**Depends on:** Intake screen being built. This is v1.
+**Cons:** $99/year Apple Developer Program. App Store review cycle (1-3 days). Universal links require web-side `apple-app-site-association` file deploy.
 
----
+**Context:** SwiftUI + async/await. iOS 17+ covers ~85% of iOS users and gets us PHLivePhoto, modern PassKit, StoreKit 2. Magic-link flow: web sends email → user taps link → universal link opens app with auth token → app stores in Keychain.
 
-### V1.5. Generating screen: status copy dedup + thinking-notes voice ✅ shipped 2026-04-30
-
-**Shipped:**
-- `apps/web/lib/thinking-notes/status.ts` — pure `buildCanonicalStatus(ctx)`. One canonical phrasing: "Sketching {n} invites for {honoree}'s {event}…" with graceful fallbacks (honoree-only, event-only, bare). Reuses `containsWord` from `lib/intake.ts` to avoid double-prepending the ordinal age.
-- `apps/web/app/components/GeneratingStatus.tsx` — top-of-section status card: canonical line on top, thinking-note rotating beneath it via framer-motion fade. Shuffles applicable templates per session, rotates every 4-6s (`pickIntervalMs`), wraps with `nextNoteIndex`. `aria-live="polite"`.
-- Dedup: removed the redundant per-card "generating your next card" overlay in `SwipeCard.tsx` and the "Next card is still rendering." string in `SwipeStack.tsx`. The canonical status is now the single source of truth during the loading window.
-- Tests: `status.test.ts` (9 cases — singular/plural, ordinal handling, all fallbacks) + `rotate.test.ts` (deterministic shuffle, wrap, interval bounds). 64 tests pass total. Typecheck + build clean.
-
-**What:** Two fixes on the generating screen. (a) Show one status line max — "Sketching… Sketching… Sketching 4 concepts for Lily's first birthday" reads like a stuttering bug. Pick one canonical phrasing and stick with it for the session. (b) Adopt Claude's flip-book thinking-notes voice — small clever notes like "Adding a dash of cake…" / "Picking colors Lily would love" — instead of sterile progress copy. Add jokes and contextual references (honoree name, event type) so it feels like a designer is in the room, not a load bar.
-
-**Why:** Mrs. W's 2026-04-22 reaction to the generating mockups. She picked the "calm" variant overall but specifically called out the duplicative copy as a defect and the playful thinking-notes as the right tone. The 60-second wait is the highest-anxiety moment in the funnel; voice on this screen does emotional work the spinner can't.
-
-**Pros:** Cheap fix — copy + a single status line. Big emotional payoff at the most fragile moment in the funnel. Aligns with "feels like a designer is working on it" positioning. Reuses the thinking-notes template library from V1.2.
-
-**Cons:** None substantial. Risk is over-doing the cleverness and tipping from "warm" to "annoying" — keep notes short and specific to the user's event.
-
-**Context:** Pairs with V1.2 (thinking-notes template library expansion). V1.5 is the screen-level UX fix; V1.2 is the content library that powers it. Single status line should reference the user's actual event ("Sketching 4 invites for Lily's 5th birthday") not generic ("Generating concepts"). Notes rotate every 4-6s during the 60s window.
-
-**Depends on:** Generating screen being built. v1.
+**Depends on:** OPS.2 (Apple Developer Program enrollment).
 
 ---
 
-### V1.6. User-editable text UI on the compare screen
+### V2.2. In-App Purchase via StoreKit 2
 
-**What:** After code-overlay typography ships in v1, a simple edit form on the compare screen. User can tweak honoree name, date, time, address, custom line before paying. Server re-renders text overlay on paid concepts instantly.
+**What:** $10 invite-credit SKU via StoreKit 2. Server-side receipt validation against existing Postgres schema (reuse credit-grant logic from PR #17). Apple Small Business Program enrollment for reduced rate.
 
-**Why:** Parser extraction will be ~80% accurate. 20% of events will have a misspelled name, wrong time, missing detail. An edit UI turns a $7 refund request into a 2-second re-render. Trust win. Pulled into v1 because it directly protects paid-conversion in the week-3 kill-criteria window (STRATEGY #2) — without it, parser misses become refund requests.
+**Why:** Smoother UX than web-redirect-back-to-app per user decision (2026-05-09). Tax cost (~$1.50/sale at SBP 15%) is acceptable for the friction savings.
 
-**Pros:** Massive retention + trust win. Near-zero engineering cost once code-overlay is the text pipeline. Distinguishes product from competitors.
+**Pros:** Native purchase flow. Apple handles all PCI/fraud. Restorable purchases free. Higher conversion than web checkout.
 
-**Cons:** +1 day of UI work. Adds form validation surface.
+**Cons:** Pricing locked to App Store tiers (closest is $9.99 — confirm). Cannot show web prices in-app per Apple guidelines (no "buy on web for cheaper" links). Apple review can reject for IAP setup mistakes.
 
-**Context:** Code-overlay typography was locked in v1 during this review. Text becomes data. Rendering with different text strings is a server round-trip (fast). Fields: honoree name, date, time, location, honoree age, custom line. Keep it minimal; any field beyond those 6 is out of scope.
+**Context:** Use existing Postgres `purchases` table; add `apple_transaction_id` column. Server validates StoreKit signed transaction → grants credit via existing magic-link path. Web Stripe purchase stays available for fallback.
 
-**Depends on:** Code-overlay typography shipping in v1 (see V1.7).
-
----
-
-### V1.7. Code-overlay text rendering pipeline ✅ shipped 2026-05-05
-
-**Shipped:**
-- `apps/web/lib/text-overlay/` — `types`, `layouts` (bottom-third), `fonts` (Great Vibes + Lato Regular/Bold loaded via opentype.js, ~1.7MB bundled OFL fonts), `compose` (text → SVG glyph paths, per-glyph `<g translate>` to dodge librsvg path-data length limits), `render` (sharp composite). Pure-fn tests + a smoke test that writes visual evidence to `.context/v17-smoke-{script,sans}.png` when `WRITE_SMOKE_OUTPUTS=1`.
-- `apps/web/app/api/v1/render-text/route.ts` — Node-runtime POST endpoint. Validates fields (≤200 chars), caps image upload at 8MB, returns composited PNG b64.
-- `apps/web/app/hooks/useTextOverlay.ts` — debounced (350ms) per-card render hook with abort, blob URL caching, error state. Concurrent renders for all kept cards.
-- `ComparePayScreen` swaps in the composited image with "rendering text…" / "updating…" loading states.
-- `SwipeCardData` extended with `imageB64 / layout / fontStack`; concepts alternate `script` ↔ `sans` per index.
-- `buildPrompt()` flipped: bottom-third reserved for the overlay; model explicitly told NOT to render letters into the image.
-- Deps: `sharp`, `opentype.js`, `@types/opentype.js`.
-
-**Pivot story (preserved for future me):** SVG `@font-face` base64 silently falls back to system sans in librsvg. `sharp.text()` requires Fontconfig that doesn't reliably resolve bundled fonts on macOS. Pivoted to opentype.js → SVG `<path>` glyphs. Two more bugs: opentype 1.3.5 trips on Lato's GSUB `lookupType:6 substFormat:2` (fixed by glyph-by-glyph rendering, skipping shaping), and librsvg silently truncates long concatenated path `d` data (fixed by emitting one `<path>` per glyph inside per-glyph `<g translate>`).
-
-**Original spec for context:**
-
-**What:** Server-side compositor that takes `(background_image, fields, layout_template) => final_png`. Prompt the model to leave a clean text region in each generated concept, then overlay the user's actual text strings (honoree, event, date, time, location, customLine) using real fonts via `sharp` (or skia-canvas). Pick a small set of layout templates (e.g., bottom-third title block, centered card, top-banner) and a small font set per aesthetic (script, modern serif, sans). Concept generation stores `{ imageUrl, layout: "bottom-third", fontStack: "script" }` so re-renders are deterministic.
-
-**Why:** `gpt-image-2` text generation is ~80% accurate at best — misspells names, garbles dates, fonts shift mid-word. For a paid product ($7 per invite), text correctness is a refund-rate determinant, not a polish item. Code-overlay turns a generated typo into a 2s server re-render with the user's exact strings, in the user's chosen font. Decoded during the post-V1.3 review on 2026-05-01 when we realized the compare/edit form (V1.6) was already wired but had no rendering pipeline behind it. Inpainting via the gpt-image-2 edits API was considered and rejected: ~$0.05 + 5–15s per edit, *and* inpainted text also misspells.
-
-**Pros:** Text always perfect. Edits are free (no API call). Unlocks V1.6 (edit-text form is already in code, just needs the renderer). Removes the #1 refund cause.
-
-**Cons:** ~1–2 days of work: prompt patterning to reserve text regions, font licensing/loading on the server, layout templates, server route, and a small image-composition library dep (likely `sharp` since Next on Vercel already uses it). Loses the "model wrote your name in cursive" magic — text uses standard typography rather than scene-integrated lettering.
-
-**Context:** ComparePayScreen + EditTextForm are already built (PR #14 / 2026-05-01); they capture `{ honoree, event, date, time, location, customLine }` but currently route to a stub. This TODO builds the rendering side. Suggested first cut: 1 layout (bottom-third title block), 2 fonts (script for "elegant" concepts, sans for "modern"), `sharp.composite()` with SVG-rendered text. Validate on real generations before expanding template/font set.
-
-**Depends on:** V1.3 shipped (PR #14). Blocks V1.6 going live.
+**Depends on:** V2.1, OPS.3 (SBP enrollment).
 
 ---
 
-## v1.1
+### V2.3. Native intake (speech recognition + chips)
 
-### V1.1.1. RSVP tracking + guest management
+**What:** Long-press mic uses on-device `SFSpeechRecognizer`. Event-type chips as native SwiftUI controls. Same UX vision as deferred V1.4: unified text+voice input with chips as empty-state helpers.
 
-**What:** v1.1 feature. RSVP short-code texted alongside share URL. Guest RSVP form (Yes / No / Maybe + plus-ones + dietary notes). Host dashboard showing guest list, responses, reminder export to iMessage.
+**Why:** iOS speech recognition is free, on-device (privacy + offline), and zero-latency vs the gpt-4o-mini-transcribe path the web version would have used. Native chips feel correct, not styled buttons.
 
-**Why:** Paperless Post, Evite, Greenvelope, Punchbowl all have this. Users will expect it post-v1. Opens a second paid moment: "Unlock guest tracking for +$5."
+**Pros:** Better UX than web could ever ship. Lower cost (no transcribe API). Privacy story (on-device).
 
-**Pros:** Feature parity with incumbents. Second pay moment per event. Increases retention (user comes back to the host dashboard to check RSVPs, which re-exposes them to the upsell).
+**Cons:** Requires `NSSpeechRecognitionUsageDescription` + `NSMicrophoneUsageDescription` in Info.plist. Some users decline mic permission — UX needs graceful fallback to text + chips only.
 
-**Cons:** 1-2 weeks of v1.1 work. Requires email or SMS delivery for guest notifications (new infra vertical).
+**Context:** Suggested chips: birthday, baby shower, graduation, gender reveal, milestone, wedding, other. Tapping seeds the textbox with starter phrase. Long-press starts recording with waveform + timer; release stops + transcribes + appends.
 
-**Context:** Design doc line 75 already has this as "planned for v1.1." Capturing here so it doesn't drift. Guest data model needs design: `invites ← has_many → rsvps (email, status, plus_ones, notes, responded_at)`.
-
-**Depends on:** v1 paid-conversion signal hitting week-3 kill criteria.
+**Depends on:** V2.1.
 
 ---
 
-### V1.1.2. Apple Wallet pass integration
+### V2.4. Live Photo creation + iOS-to-iOS sharing
 
-**What:** Static .pkpass signing pipeline on the Fly.io worker, `POST /api/v1/invites/{id}/wallet-pass` endpoint, pass template with invite illustration + event metadata, Apple PassKit signing cert. Add-to-Wallet CTA on share page. Rely on Apple's built-in time-based relevance for lock-screen surfacing near event date. Defer push-update web service (APNs) until retention data shows guests actually use Wallet pass.
+**What:** Generate paired JPEG + 3s MOV with matching `content-identifier` metadata. Combine via `PHLivePhoto.request` + save to Photos library via `PHAssetCreationRequest`. Share sheet preserves Live Photo when sent via iMessage/AirDrop. Recipient can set as lockscreen wallpaper.
 
-**Why:** Mrs. W identified Wallet pass as a high-value differentiator on the share page during 2026-04-22 review — "American-Airlines-style timely reminders." Deferred from v1 by /plan-eng-review on 2026-04-22 to protect solo builder timeline. Static pass with native time-relevance delivers ~80% of the vision for ~20% of the build cost.
+**Why:** Live Photo on lockscreen is the iconic moment that beats Etsy/Canva. iOS-to-iOS only by design — Android gets MP4 fallback link. Defining product moment that no competitor in the invite space ships.
 
-**Pros:** Unique in the invite space (nobody else does this well). Second retention moment per event. Low incremental infra — cert + template + sign + serve. Works on share page visits from any guest phone.
+**Pros:** Free virality ("how did you do that?"). Lockscreen presence = persistent retention. Compounds with Wallet pass.
 
-**Cons:** ~1 day of solo build for static pass; ~3-4 days for full push-update service. PassKit cert management becomes a permanent operational task (annual renewal). Adds a vendor dependency on Apple's notarization chain.
+**Cons:** Requires `NSPhotoLibraryAddUsageDescription`. Live Photo bundle size (~3-5MB) constrains over-cellular delivery — must use iCloud Link share for full quality. Simulator behavior diverges from device; test on real hardware early.
 
-**Context:** Design doc line 485 notes the vision is "American-Airlines-style timely reminders with a cute image pulled from the invitation." Static pass path: node-passkit or similar lib on the worker. Cert is one-time setup in Apple Developer portal. Template JSON references the invite image URL. Worth building the push-update service later only if v1.1+ usage data shows the feature is sticky.
+**Context:** MOV is the Grok video clip from V2.5. Pairing logic: write asset identifier to MOV's `com.apple.quicktime.content.identifier` metadata + JPEG's `MakerApple` field 17. Reference: ImageIO + AVFoundation.
 
-**Depends on:** v1 paid-conversion signal hitting week-3 kill criteria + Apple Developer Program setup (already budgeted in design doc L258).
+**Depends on:** V2.1, V2.5.
 
 ---
 
-## v1.5+
+### V2.5. Surprise-reveal animation pipeline (Grok video)
 
-### V1.5+.1. LLM-driven context-extraction intake
+**What:** During text-edit step, kick off background Grok short-clip video generation on the user's chosen concept. On review screen reveal, swap the still image to the animated MP4 with a still/animated toggle. Audio muted by default (autoplay policy); tap to unmute.
 
-**What:** A conversational intake layer that asks follow-up questions after the initial description to deepen context: "Who's this for?" "What's the vibe?" "Where is it?" "Any design direction — preferred colors, themes, references you've seen you loved?" gpt-4o-mini drives 2-4 chained questions based on what's still ambiguous in the parse. Output feeds into the generation prompt as richer context than a single-shot description provides. Ship as an optional "tell me more" affordance, not a gate on the happy path.
+**Why:** Hides 30-60s gen latency behind existing user time. Surprise-reveal makes a $10 invite feel like a gift, not a transaction. Toggle gives users who genuinely want stills an opt-out without losing the animated default.
 
-**Why:** The locked v1 intake is a single-shot free-text + chip + voice → parser → generate flow. That's enough for "Lily's 5th birthday, June 15, at the park" but leaves a lot of taste-signal on the table. The highest-variance variable in generation quality is the prompt; better prompts come from better context; better context comes from knowing what to ask about. An LLM-driven question loop is the cheapest way to extract that without a form.
+**Pros:** Killer differentiation moment. No marginal user time cost. Per-invite toggle creates invisible learning (default reflects user's first choice). Web fallback still works for Android recipients.
 
-**Pros:** Gets bespoke-designer quality closer to reality — the thing an Etsy designer does on day 2 is ask clarifying questions. Creates a differentiator vs. single-shot competitors. Re-uses the parser infrastructure already locked. Cost is ~$0.002/session at gpt-4o-mini pricing.
+**Cons:** Grok video API cost per generation. Latency variance (sometimes >60s) needs graceful fallback — "polishing your invite…" shimmer if not ready by review reveal. Audio policies vary; iOS muted-autoplay for inline video works but unmute-on-tap requires explicit user gesture.
 
-**Cons:** Every extra question is a conversion funnel leak. Must be strictly optional and skippable. Adds prompt-engineering surface area (the system prompt for "ask the right next question" is not trivial). Risk of the LLM asking dumb or generic questions that annoy the target user.
+**Context:** Trigger gen at text-commit, NOT image-gen completion — generating video for invites abandoned during text edit is wasted compute. Cache MP4 in S3 + CDN keyed on `concept_id`. Recipient share link renders animated by default with `?still=1` override.
 
-**Context:** v1 ships intake without this. Gather week-3 data first — what do paying users consistently NOT get right on first generation? What do refund requests cite? That signal tells you whether the extraction loop would have caught it. Natural follow-on to the existing `POST /api/v1/events/parse` endpoint: add `POST /api/v1/events/refine` that takes the current parsed state and returns `{ next_question?, confidence, ready_to_generate }`. Loop until `ready_to_generate=true` or user hits "I'm done, generate."
+**Depends on:** Grok video API access, V2.1, V2.2 (gated on paid).
 
-**Depends on:** v1 paid-conversion data. Don't build before week 3.
+---
+
+### V2.6. Apple Wallet pass (static pass v1)
+
+**What:** PassKit-signed `.pkpass` template with invite illustration + event metadata (date, location, RSVP link, host name). "Add to Apple Wallet" CTA on share page. Apple's built-in time-relevance auto-surfaces on lockscreen 30-60 min before event.
+
+**Why:** Mrs. W flagged Wallet pass as a high-value differentiator (2026-04-22). Iconic American-Airlines moment for guests. Static pass = ~80% of vision for ~20% of build cost. Push-updates deferred to V3.2.
+
+**Pros:** Unique in invite space. Doubles as RSVP/check-in QR. Low incremental infra (cert + template + sign + serve).
+
+**Cons:** ~1 day for static pass; PassKit cert is annual operational task. Apple notarization chain is a vendor dependency.
+
+**Context:** Use `node-passkit-generator` or similar on existing Next.js worker. Cert is one-time setup in Apple Developer portal (V2.1 dependency). Template JSON references invite image URL. Generated on-demand from `/api/v1/invites/{id}/wallet-pass`. Bridges to V3.2 (push updates) and the broader Dynamic Live Invites vision.
+
+**Depends on:** OPS.2 (Apple Developer Program for cert).
+
+---
+
+### V2.7. Reminder images + push notifications
+
+**What:** Near-event auto-generated graphics ("3 days out", "tonight!", "see you in an hour") delivered via APNs push. Reuses existing image pipeline with new prompt templates per countdown stage.
+
+**Why:** Engagement moment between purchase and event. Re-exposes user to the product. Compounds with Wallet pass time-relevance. Near-zero marginal cost (image gen amortized over notifications).
+
+**Pros:** Sticky engagement layer. Optional surface for upsells (registry, additional invites). Could even animate countdowns.
+
+**Cons:** Push-permission ask is friction — time the ask correctly (after first invite created, not on app open). Generated images for cancelled events = wasted compute (need cancel flow).
+
+**Context:** Trigger schedule: T-7 days, T-3 days, T-1 day, T-1 hour. APNs setup via Apple Push Notification service (cert in Apple Developer portal). Image cache keyed on `(invite_id, countdown_stage)`.
+
+**Depends on:** V2.1, image-gen pipeline access.
+
+---
+
+### V2.8. Edit text on iOS (port from web)
+
+**What:** Native edit form on review screen for honoree, date, time, location, custom line. Calls existing `/api/v1/render-text` from V1.7 to re-composite text overlays.
+
+**Why:** V1.7 renderer is reusable as-is. iOS just needs the form + render call.
+
+**Pros:** Cheap port — backend already done.
+
+**Cons:** None substantial.
+
+**Context:** Reuse the same field set from V1.6 (honoree, date, time, location, age, custom line). SwiftUI form with keyboard-appropriate input types (date picker, etc.).
+
+**Depends on:** V2.1, V1.7 ✅.
+
+---
+
+## V3+ event lifecycle (post-V2 launch)
+
+Triggered after V2 paid-conversion signal validates the iOS app. Builds the cohost agent / event OS layer.
+
+### V3.1. RSVP tracking + guest management
+
+**What:** RSVP short-code texted alongside share URL. Guest RSVP form (Yes / No / Maybe + plus-ones + dietary notes). Host dashboard showing guest list, responses, reminder export to iMessage. iOS-first interface for hosts; web-fallback for non-iOS hosts.
+
+**Why:** Paperless Post, Evite, Greenvelope, Punchbowl all have this. Users will expect it post-V2. Opens a second paid moment: "Unlock guest tracking for +$5."
+
+**Pros:** Feature parity with incumbents. Second pay moment per event. Increases retention (host comes back to dashboard to check RSVPs, re-exposing them to upsell).
+
+**Cons:** 1-2 weeks of work. Requires email or SMS delivery for guest notifications (new infra vertical).
+
+**Context:** Guest data model: `invites ← has_many → rsvps (email, status, plus_ones, notes, responded_at)`.
+
+**Depends on:** V2 paid-conversion signal hitting kill criteria.
+
+---
+
+### V3.2. Wallet pass push-update service
+
+**What:** APNs web service for Apple Wallet — push venue changes, weather alerts, parking notes, schedule updates to all guests with the pass installed.
+
+**Why:** V2.6 ships static pass; V3.2 makes it live. Bridges to the Dynamic Live Invites vision (#7 in original 40-idea list).
+
+**Pros:** True differentiator vs static-only competitors. One-update-reaches-all-guests is huge for hosts.
+
+**Cons:** ~3-4 days build. APNs is fiddly. Pass push requires registered devices (recipients must add pass first).
+
+**Context:** Build only after V2 retention data shows guests actually save Wallet passes (target: >30% add-to-Wallet rate).
+
+**Depends on:** V2.6, V2 paid-conversion validation.
+
+---
+
+### V3.3. Live invite agent (Q&A bot)
+
+**What:** Per-event conversational agent answering guest questions: parking, dress code, food/allergy, plus-one, registry. Escalates to host when uncertain. Surfaces from share page + Wallet pass link.
+
+**Why:** Highest-leverage post-purchase feature — turns the invite into a 24/7 host assistant. Reduces host burden + improves guest experience.
+
+**Pros:** Unique. Compounds with FAQ autogen, venue intelligence, weather adaptation.
+
+**Cons:** LLM cost per session. Hallucination risk (always include "ask the host" escape).
+
+**Context:** Per-event RAG over the FAQ + manual host notes. Cap conversation depth.
+
+**Depends on:** V3.1.
+
+---
+
+### V3.4. Conversational RSVP
+
+**What:** SMS/iMessage RSVP with emoji + dietary + plus-one collection in 2-3 messages. Intelligent follow-up for non-responders.
+
+**Why:** Frictionless mobile RSVP is a known wedge — Greenvelope/Paperless Post don't do it well.
+
+**Pros:** Removes the #1 host complaint about invite tools (low RSVP rates).
+
+**Cons:** SMS infra (Twilio?). Per-message cost.
+
+**Context:** Hooks into V3.1 guest management. SMS short-code + reply parsing.
+
+**Depends on:** V3.1.
+
+---
+
+### V3.5. Post-event memory engine
+
+**What:** Shared photo album linked to the invite. AI curation, recap reels, auto-thank-yous, annual memory resurfacing.
+
+**Why:** Extends event from one-day moment to persistent memory layer. Massive retention loop — annual resurfacing creates new event opportunities.
+
+**Pros:** Sticky beyond the event itself. Compounds with shared albums and guest-uploaded photos.
+
+**Cons:** Photo storage costs. AI curation latency. Privacy considerations for guest-uploaded photos (consent flow needed).
+
+**Context:** Shared album generates own URL/QR for guests to upload. AI does best-photo detection, duplicate cleanup, face grouping.
+
+**Depends on:** V2 launched + retention data showing event lifecycle is desired.
+
+---
+
+### V3.6. Persistent taste memory + person-aware intelligence
+
+**What:** Per-family aesthetic profile that learns typography/palette/layout preferences over time. Person-aware intelligence: relationship-aware tone, culturally aware formatting/language. Recipient-specific invite variants.
+
+**Why:** Makes the product feel like a designer who *knows you*, not a generic AI. Compounds across events — second event for a family is better than the first.
+
+**Pros:** Strong moat (taste data accumulates). Personalization differentiator.
+
+**Cons:** Cold-start problem (first event has no taste history). Privacy/data-retention considerations.
+
+**Context:** Build only after V2 + V3.1 are live and you have multiple events per family in the data.
+
+**Depends on:** V2 launched, V3.1.
+
+---
+
+### V3.7. LLM-driven context-extraction intake
+
+**What:** Conversational intake layer that asks 2-4 follow-up questions after initial description to deepen context. gpt-4o-mini drives the question loop based on what's still ambiguous in the parse. Optional "tell me more" affordance, not a gate on the happy path.
+
+**Why:** The locked V2 intake is a single-shot description → parse → generate. That leaves taste-signal on the table. Bespoke designers ask clarifying questions on day 2. An LLM-driven question loop is the cheapest way to extract that signal without a form.
+
+**Pros:** Gets bespoke-designer quality closer to reality. Differentiator vs single-shot competitors. Cost ~$0.002/session at gpt-4o-mini pricing.
+
+**Cons:** Every extra question is a funnel leak. Must be strictly optional and skippable. Risk of LLM asking dumb/generic questions.
+
+**Context:** Natural follow-on to existing `POST /api/v1/events/parse`: add `POST /api/v1/events/refine` that takes current parsed state and returns `{ next_question?, confidence, ready_to_generate }`. Loop until `ready_to_generate=true` or user hits "I'm done, generate."
+
+**Depends on:** V2 paid-conversion data — don't build before knowing what users consistently get wrong.
+
+---
+
+## V4+ commerce
+
+### V4.1. Gift registry with affiliate links
+
+**What:** Integrated registry. AI suggests gifts based on event theme + honoree details. Affiliate revenue from Amazon, Target Registry, Honeyfund (cash gifts), Zola partnership.
+
+**Why:** Monetization layer beyond the $10 SKU. Natural fit — guests want to know what to bring; hosts want to capture preferences without an awkward "here's my Amazon list" link.
+
+**Pros:** Stacks revenue without raising primary SKU price. AI gift suggestions are a differentiator vs basic registry tools. Affiliate revenue compounds with engagement (every guest who clicks through is potential $).
+
+**Cons:** Affiliate API integrations have approval processes (Amazon especially). Fulfillment is third-party (less control over guest experience). Registry abandonment is a known issue across the category.
+
+**Context:** Linked from invite share page + Wallet pass. Honeyfund / Zola partnership for cash-gift flows vs physical-only registries. AI suggestions powered by event theme + honoree taste from V3.6.
+
+**Depends on:** V2 launched + measurable guest engagement on share page.
+
+---
+
+### V4.2. Full event asset generation
+
+**What:** Generate matching menus, table cards, placards, banners, welcome signs, stickers, thank-you cards, social stories, QR signs, photo booth props, cake toppers, coloring sheets, itinerary cards — all matching the invite's aesthetic.
+
+**Why:** Reuses existing image pipeline. Hosts who buy the invite are the same hosts who need the matching assets. Natural upsell at near-zero marginal cost.
+
+**Pros:** Multiplier on average revenue per event. Matching aesthetic across all assets is the bespoke-designer experience guests notice.
+
+**Cons:** Print-on-demand fulfillment for physical assets adds operational complexity. Digital-only first (PDFs to download/print) is the cheap entry.
+
+**Context:** Phase 1: digital downloads (PDFs). Phase 2: print-on-demand integration (Printful, Gelato). Phase 3: vendor marketplace for custom physical orders.
+
+**Depends on:** V2 launched.
 
 ---
 
@@ -211,22 +336,48 @@ For non-engineering work (validation cohorts, kill criteria, pricing tests, ethi
 
 **Context:** `stripe config --list` shows `live_mode_key_expires_at = '2026-06-09'` and `test_mode_key_expires_at = '2026-06-09'`. Restricted keys (`rk_live_…`) only — never store unrestricted secrets in env. The webhook secret (`whsec_…`) does not expire on the same cadence; only rotate it if compromised.
 
-**Depends on:** Stripe Checkout shipping (so the rotation actually has something to break). Schedule rotation for ~2026-05-25 to leave a 2-week buffer.
+**Depends on:** Schedule rotation for ~2026-05-25 to leave a 2-week buffer.
+
+---
+
+### OPS.2. Apple Developer Program enrollment
+
+**What:** Enroll Overdraft Inc. in Apple Developer Program ($99/year). Set up app ID, provisioning profiles, push notification cert (APNs), PassKit cert, StoreKit configuration.
+
+**Why:** Required for V2 (iOS app). Annual cost. Cert management is permanent operational task.
+
+**Pros:** One-time setup unlocks all V2.x. Org enrollment lets the app ship under "Overdraft Inc." not personal name.
+
+**Cons:** $99/year. D-U-N-S number required for org enrollment. ~1-3 days for approval.
+
+**Context:** Use Overdraft Inc. account (same as Stripe). Enroll under business name. Get D-U-N-S free from Dun & Bradstreet (~1 week processing if not already on file).
+
+**Depends on:** Decision to build V2 (committed 2026-05-09).
+
+---
+
+### OPS.3. Apple Small Business Program enrollment
+
+**What:** Enroll Overdraft Inc. in Apple Small Business Program. Reduces IAP fee from 30% to 15% for orgs under $1M/year in App Store revenue.
+
+**Why:** Saves 15 percentage points on every $10 IAP transaction = $1.50/sale. Material at scale.
+
+**Pros:** Material margin improvement. Standard path for indie devs.
+
+**Cons:** Annual reverification required. If revenue exceeds $1M in a year, reverts to 30% the following year.
+
+**Context:** Apply via Apple Developer portal after Developer Program enrollment. Verify exact rate before financial planning — user said 10% on 2026-05-09; published rate is 15%. Could be a recent change or confusion; confirm.
+
+**Depends on:** OPS.2.
 
 ---
 
 ## Done
 
-### ~~P1. Verify RTK installation~~ ✓ 2026-04-26
-
-**~~What:~~** ~~Confirm `rtk` is on your PATH and `rtk gain` returns analytics. If missing, install from reachingforthejack/rtk (the Rust Token Killer variant, NOT Rust Type Kit — name collision warning in RTK.md).~~
-
-**~~Why:~~** ~~Your global `~/.claude/RTK.md` says "All other commands are automatically rewritten by the Claude Code hook" — if RTK isn't actually installed, you're missing the 60-90% token savings it claims on dev operations.~~
-
-**~~Pros:~~** ~~Free token savings on every dev session. 2 min check.~~
-
-**~~Cons:~~** ~~None if it's already installed. If not, install involves Rust toolchain.~~
-
-**~~Context:~~** ~~Run `which rtk` and `rtk gain`. If "command not found", install and set up the Claude Code hook per your RTK.md. Delete this TODO when verified.~~ Verified: rtk 0.35.0 at `/Users/blainewilson/.local/bin/rtk`, 50.2% savings across 1707 commands.
-
-**~~Depends on:~~** ~~Nothing.~~
+- **V1.1** Voice-input feature flag + cost kill-switch — shipped 2026-04-26 (lean MVP). `apps/web/lib/voice-gate.ts` + transcribe/voice-status routes + `useVoiceEnabled` hook. PostHog/Sentry/shared UsageStore deferred.
+- **V1.2** Thinking-notes template library (initial 40) — shipped 2026-04-26. `apps/web/lib/thinking-notes/{templates,render}.ts`. Week-3 expansion to 80 pending Mrs. W beta feedback.
+- **V1.3** Tinder-style L/R swipe gestures (web) — shipped 2026-04-30 (PR #14). `apps/web/lib/swipe.ts` + `SwipeStack.tsx`, drag/tilt/peek/snap-back, undo, 4-dot progress, X/heart fallback buttons. iOS port now part of V2.x.
+- **V1.5** Generating screen: status copy dedup + thinking-notes voice — shipped 2026-04-30. `apps/web/lib/thinking-notes/status.ts` + `GeneratingStatus.tsx`. Single canonical status line + rotating thinking-notes (4-6s).
+- **V1.7** Code-overlay text rendering pipeline — shipped 2026-05-05. `apps/web/lib/text-overlay/` (opentype.js → SVG glyph paths → sharp composite) + `/api/v1/render-text` route + `useTextOverlay` hook. Pivot story preserved in git log.
+- **Stripe Checkout + magic-link post-purchase access** — shipped 2026-05-08 (PR #17). $10 SKU, Postgres-backed credit grant, Resend magic-link delivery. Web purchase flow stays as fallback for V2 IAP.
+- **P1** RTK installation verified — 2026-04-26. rtk 0.35.0 at `/Users/blainewilson/.local/bin/rtk`, 50.2% savings across 1707 commands.
