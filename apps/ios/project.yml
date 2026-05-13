@@ -32,6 +32,7 @@ targets:
     scheme:
       testTargets:
         - CordialInvitesTests
+        - CordialInvitesUITests
   CordialInvitesTests:
     type: bundle.unit-test
     platform: iOS
@@ -43,3 +44,14 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cordialinvites.app.tests
         INFOPLIST_FILE: CordialInvitesTests/Info.plist
+  CordialInvitesUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - CordialInvitesUITests
+    dependencies:
+      - target: CordialInvites
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cordialinvites.app.uitests
+        INFOPLIST_FILE: CordialInvitesUITests/Info.plist

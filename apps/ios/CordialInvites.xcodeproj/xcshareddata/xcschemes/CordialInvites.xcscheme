@@ -50,6 +50,17 @@
                ReferencedContainer = "container:CordialInvites.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "0AE3864E8AB2EA3D10C1A3CC"
+               BuildableName = "CordialInvitesUITests.xctest"
+               BlueprintName = "CordialInvitesUITests"
+               ReferencedContainer = "container:CordialInvites.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>
