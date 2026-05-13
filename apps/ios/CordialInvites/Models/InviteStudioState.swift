@@ -12,6 +12,7 @@ final class InviteStudioState: ObservableObject {
     @Published var elapsedText = ""
     @Published var isGenerating = false
     @Published var errorMessage: String?
+    @Published var voiceMessage: String?
     @Published var selectedVibe = "Garden party"
     @Published var selectedEventType = "Birthday"
 
@@ -75,10 +76,12 @@ final class InviteStudioState: ObservableObject {
         if speech.isRecording {
             recordingSessionID = nil
             speech.stop()
+            voiceMessage = "Voice input stopped."
             return
         }
 
         errorMessage = nil
+        voiceMessage = "Requesting voice access..."
         do {
             let existingText = promptText.trimmed
             let sessionID = UUID()
@@ -92,8 +95,10 @@ final class InviteStudioState: ObservableObject {
                     self.promptText = "\(existingText) \(transcript)"
                 }
             }
+            voiceMessage = "Listening..."
         } catch {
             recordingSessionID = nil
+            voiceMessage = nil
             errorMessage = error.localizedDescription
         }
     }
