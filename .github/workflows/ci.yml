@@ -318,6 +318,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - name: Delete PR evidence branch
         env:
           GH_TOKEN: ${{ github.token }}
