@@ -154,6 +154,17 @@ jobs:
 
           cp -R "$SRC_DIR/." "$TMP_DIR/"
           printf '' > .nojekyll
+          mkdir -p apps/web
+          cat > apps/web/vercel.json <<'EOF'
+          {
+            "$schema": "https://openapi.vercel.sh/vercel.json",
+            "git": {
+              "deploymentEnabled": {
+                "pr-evidence-pr-*": false
+              }
+            }
+          }
+          EOF
           desktop_video_markup=""
           if [ -f desktop-video.webm ]; then
             desktop_video_markup='
