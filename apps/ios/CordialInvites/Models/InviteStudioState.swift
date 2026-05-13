@@ -4,6 +4,9 @@ import SwiftUI
 @MainActor
 final class InviteStudioState: ObservableObject {
     @Published var intake = InviteIntake.demo
+    @Published var promptText = ""
+    @Published var selectedPromptStarter: String?
+    @Published var selectedPromptStarterChip: String?
     @Published var image: UIImage?
     @Published var prompt = ""
     @Published var elapsedText = ""
@@ -13,14 +16,24 @@ final class InviteStudioState: ObservableObject {
     @Published var selectedEventType = "Birthday"
 
     let service: InviteGenerationService
+    let speech = SpeechTranscriptionService()
+
+    var promptStarter: String {
+        selectedPromptStarter ?? "Lily is turning 5 on May 18th at our house - pastel unicorn theme, snacks at 2pm"
+    }
+
+    var canGenerate: Bool {
+        !promptText.trimmed.isEmpty && !isGenerating
+    }
 
     init(service: InviteGenerationService = OpenAIInviteGenerationService()) {
         self.service = service
     }
 
     func generate() async {
-        guard intake.isReady else {
-            errorMessage = "Add the event details before sketching."
+        let description = promptText.trimmed
+        guard !description.isEmpty else {
+            errorMessage = "Tell us about the event before sketching."
             return
         }
 
@@ -31,7 +44,7 @@ final class InviteStudioState: ObservableObject {
         elapsedText = ""
 
         do {
-            let result = try await service.generateInvite(intake: intake)
+            let result = try await service.generateInvite(prompt: description)
             image = result.image
             prompt = result.prompt
             elapsedText = result.elapsedText
@@ -40,6 +53,33 @@ final class InviteStudioState: ObservableObject {
         }
 
         isGenerating = false
+    }
+
+    func applyPromptStarter(_ value: String) {
+        selectedPromptStarterChip = value
+        selectedPromptStarter = starterText(for: value)
+    }
+
+    func toggleRecording() async {
+        if speech.isRecording {
+            speech.stop()
+            return
+        }
+
+        errorMessage = nil
+        do {
+            let existingText = promptText.trimmed
+            try await speech.start { [weak self] transcript in
+                guard let self else { return }
+                if existingText.isEmpty {
+                    self.promptText = transcript
+                } else {
+                    self.promptText = "\(existingText) \(transcript)"
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func applyEventType(_ value: String) {
@@ -56,6 +96,27 @@ final class InviteStudioState: ObservableObject {
             intake.vibe = normalized
         } else if !intake.vibe.localizedCaseInsensitiveContains(normalized) {
             intake.vibe = "\(intake.vibe), \(normalized)"
+        }
+    }
+
+    private func starterText(for value: String) -> String {
+        switch value {
+        case "Kid's birthday":
+            "Lily is turning 5 on May 18th at our house - pastel unicorn theme, snacks at 2pm"
+        case "Baby shower":
+            "Baby shower for Maya on June 8th at the garden room - soft green and cream, sweet but modern"
+        case "Milestone birthday":
+            "Milestone birthday for my mom at the lake house - classic, warm, a little nostalgic"
+        case "Graduation":
+            "Graduation party for Noah on May 31st at 6pm - backyard dinner, school colors, polished and fun"
+        case "Dinner party":
+            "Dinner party next Saturday at 7pm - cozy, seasonal, handwritten menu feeling"
+        case "Bridal shower":
+            "Bridal shower for Emma on Sunday afternoon - garden florals, crisp serif type, soft blush"
+        case "Housewarming":
+            "Housewarming for Alex and Jordan next Friday - relaxed, warm, new-home feeling"
+        default:
+            "Tell us who it is for, what you are celebrating, when and where, and the feeling you want"
         }
     }
 }

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0EC66B2C4A382612DFFDA228 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */; };
+		148D704E07AC66F99FC09CDF /* SpeechTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1637AC6A661C4B7220F8EBB1 /* SpeechTranscriptionService.swift */; };
 		300BC99762EB66FE07903A89 /* InviteGenerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */; };
 		41C71244BEF52B7C35F00FFC /* CordialInvitesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB58E718D42F427CBDEC421 /* CordialInvitesTests.swift */; };
 		8FFB9B2EA3C5F84D3269F25A /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = C190408390B165AEE3714984 /* Brand.swift */; };
@@ -29,6 +30,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1637AC6A661C4B7220F8EBB1 /* SpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriptionService.swift; sourceTree = "<group>"; };
 		40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5F07A73F4619A08445B0B474 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		60D63DB2715F462AF5CFF713 /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
@@ -107,6 +109,7 @@
 			isa = PBXGroup;
 			children = (
 				8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */,
+				1637AC6A661C4B7220F8EBB1 /* SpeechTranscriptionService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -244,6 +247,7 @@
 				300BC99762EB66FE07903A89 /* InviteGenerationService.swift in Sources */,
 				9105E62F83D7D7CE6B125581 /* InviteModels.swift in Sources */,
 				BA59C62BDE23E361229241A6 /* InviteStudioState.swift in Sources */,
+				148D704E07AC66F99FC09CDF /* SpeechTranscriptionService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

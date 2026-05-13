@@ -37,7 +37,8 @@ struct GenerationSettings: Codable, Equatable {
 }
 
 struct GenerateRequest: Codable {
-    var intake: InviteIntake
+    var prompt: String?
+    var intake: InviteIntake?
     var settings: GenerationSettings
 }
 

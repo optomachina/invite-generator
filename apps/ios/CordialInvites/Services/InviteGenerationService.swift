@@ -3,7 +3,7 @@ import UIKit
 
 @MainActor
 protocol InviteGenerationService {
-    func generateInvite(intake: InviteIntake) async throws -> InviteGenerationResult
+    func generateInvite(prompt: String) async throws -> InviteGenerationResult
 }
 
 enum InviteGenerationError: LocalizedError {
@@ -43,7 +43,7 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
         self.generatePath = configuredGeneratePath ?? ""
     }
 
-    func generateInvite(intake: InviteIntake) async throws -> InviteGenerationResult {
+    func generateInvite(prompt: String) async throws -> InviteGenerationResult {
         guard let baseURL, !generatePath.trimmed.isEmpty else {
             throw InviteGenerationError.invalidBaseURL
         }
@@ -59,7 +59,7 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
         request.timeoutInterval = 300
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.httpBody = try JSONEncoder().encode(
-            GenerateRequest(intake: intake, settings: GenerationSettings())
+            GenerateRequest(prompt: prompt, settings: GenerationSettings())
         )
 
         let (data, response) = try await session.data(for: request)
