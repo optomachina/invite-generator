@@ -40,6 +40,19 @@ struct GenerateRequest: Codable {
     var prompt: String?
     var intake: InviteIntake?
     var settings: GenerationSettings
+
+    var isValid: Bool {
+        if let prompt, !prompt.trimmed.isEmpty {
+            return true
+        }
+        return intake != nil
+    }
+
+    init(prompt: String? = nil, intake: InviteIntake? = nil, settings: GenerationSettings) {
+        self.prompt = prompt
+        self.intake = intake
+        self.settings = settings
+    }
 }
 
 struct GenerateResponse: Decodable {

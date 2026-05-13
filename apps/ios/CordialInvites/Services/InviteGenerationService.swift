@@ -8,6 +8,7 @@ protocol InviteGenerationService {
 
 enum InviteGenerationError: LocalizedError {
     case invalidBaseURL
+    case invalidRequest
     case invalidResponse
     case badStatus(Int, String)
     case missingImage
@@ -17,6 +18,8 @@ enum InviteGenerationError: LocalizedError {
         switch self {
         case .invalidBaseURL:
             "The invite service URL is not configured."
+        case .invalidRequest:
+            "Tell us about the event before sketching."
         case .invalidResponse:
             "The invite service returned an unexpected response."
         case let .badStatus(code, message):
@@ -58,9 +61,11 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
         request.httpMethod = "POST"
         request.timeoutInterval = 300
         request.setValue("application/json", forHTTPHeaderField: "content-type")
-        request.httpBody = try JSONEncoder().encode(
-            GenerateRequest(prompt: prompt, settings: GenerationSettings())
-        )
+        let body = GenerateRequest(prompt: prompt, settings: GenerationSettings())
+        guard body.isValid else {
+            throw InviteGenerationError.invalidRequest
+        }
+        request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {

@@ -20,11 +20,15 @@ enum SpeechTranscriptionError: LocalizedError {
 final class SpeechTranscriptionService: ObservableObject {
     @Published private(set) var isRecording = false
 
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en_US"))
+    private let recognizer: SFSpeechRecognizer?
     private let audioEngine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var onTranscript: ((String) -> Void)?
+
+    init(locale: Locale = .autoupdatingCurrent) {
+        recognizer = SFSpeechRecognizer(locale: locale)
+    }
 
     func start(onTranscript: @escaping (String) -> Void) async throws {
         guard recognizer?.isAvailable == true else {
@@ -61,24 +65,34 @@ final class SpeechTranscriptionService: ObservableObject {
                     self?.onTranscript?(transcript)
                 }
                 if error != nil || result?.isFinal == true {
-                    self?.stop()
+                    self?.cleanupRecognition(shouldCancelTask: false)
                 }
             }
         }
     }
 
     func stop() {
+        cleanupRecognition(shouldCancelTask: true)
+    }
+
+    private func cleanupRecognition(shouldCancelTask: Bool) {
         if audioEngine.isRunning {
             audioEngine.stop()
             audioEngine.inputNode.removeTap(onBus: 0)
         }
         request?.endAudio()
-        task?.cancel()
+        if shouldCancelTask {
+            task?.cancel()
+        }
         request = nil
         task = nil
         onTranscript = nil
         isRecording = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            NSLog("Failed to deactivate audio session: %@", error.localizedDescription)
+        }
     }
 
     private func requestAuthorization() async -> Bool {

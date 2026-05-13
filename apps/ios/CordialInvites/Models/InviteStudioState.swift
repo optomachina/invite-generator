@@ -17,6 +17,17 @@ final class InviteStudioState: ObservableObject {
 
     let service: InviteGenerationService
     let speech = SpeechTranscriptionService()
+    private var recordingSessionID: UUID?
+    private let defaultPromptStarter = "Tell us who it is for, what you are celebrating, when and where, and the feeling you want"
+    private let starterTextMap = [
+        "Kid's birthday": "Lily is turning 5 on May 18th at our house - pastel unicorn theme, snacks at 2pm",
+        "Baby shower": "Baby shower for Maya on June 8th at the garden room - soft green and cream, sweet but modern",
+        "Milestone birthday": "Milestone birthday for my mom at the lake house - classic, warm, a little nostalgic",
+        "Dinner party": "Dinner party next Saturday at 7pm - cozy, seasonal, handwritten menu feeling",
+        "Bridal shower": "Bridal shower for Emma on Sunday afternoon - garden florals, crisp serif type, soft blush",
+        "Housewarming": "Housewarming for Alex and Jordan next Friday - relaxed, warm, new-home feeling",
+        "Graduation": "Graduation party for Noah on May 31st at 6pm - backyard dinner, school colors, polished and fun"
+    ]
 
     var promptStarter: String {
         selectedPromptStarter ?? "Lily is turning 5 on May 18th at our house - pastel unicorn theme, snacks at 2pm"
@@ -62,6 +73,7 @@ final class InviteStudioState: ObservableObject {
 
     func toggleRecording() async {
         if speech.isRecording {
+            recordingSessionID = nil
             speech.stop()
             return
         }
@@ -69,8 +81,11 @@ final class InviteStudioState: ObservableObject {
         errorMessage = nil
         do {
             let existingText = promptText.trimmed
+            let sessionID = UUID()
+            recordingSessionID = sessionID
             try await speech.start { [weak self] transcript in
                 guard let self else { return }
+                guard self.speech.isRecording, self.recordingSessionID == sessionID else { return }
                 if existingText.isEmpty {
                     self.promptText = transcript
                 } else {
@@ -78,6 +93,7 @@ final class InviteStudioState: ObservableObject {
                 }
             }
         } catch {
+            recordingSessionID = nil
             errorMessage = error.localizedDescription
         }
     }
@@ -100,24 +116,7 @@ final class InviteStudioState: ObservableObject {
     }
 
     private func starterText(for value: String) -> String {
-        switch value {
-        case "Kid's birthday":
-            "Lily is turning 5 on May 18th at our house - pastel unicorn theme, snacks at 2pm"
-        case "Baby shower":
-            "Baby shower for Maya on June 8th at the garden room - soft green and cream, sweet but modern"
-        case "Milestone birthday":
-            "Milestone birthday for my mom at the lake house - classic, warm, a little nostalgic"
-        case "Graduation":
-            "Graduation party for Noah on May 31st at 6pm - backyard dinner, school colors, polished and fun"
-        case "Dinner party":
-            "Dinner party next Saturday at 7pm - cozy, seasonal, handwritten menu feeling"
-        case "Bridal shower":
-            "Bridal shower for Emma on Sunday afternoon - garden florals, crisp serif type, soft blush"
-        case "Housewarming":
-            "Housewarming for Alex and Jordan next Friday - relaxed, warm, new-home feeling"
-        default:
-            "Tell us who it is for, what you are celebrating, when and where, and the feeling you want"
-        }
+        starterTextMap[value] ?? defaultPromptStarter
     }
 }
 
