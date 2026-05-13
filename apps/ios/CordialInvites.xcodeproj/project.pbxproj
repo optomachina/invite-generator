@@ -1,0 +1,497 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0EC66B2C4A382612DFFDA228 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */; };
+		300BC99762EB66FE07903A89 /* InviteGenerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */; };
+		41C71244BEF52B7C35F00FFC /* CordialInvitesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB58E718D42F427CBDEC421 /* CordialInvitesTests.swift */; };
+		8FFB9B2EA3C5F84D3269F25A /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = C190408390B165AEE3714984 /* Brand.swift */; };
+		9105E62F83D7D7CE6B125581 /* InviteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55B5F3A4089FBA011E152EE /* InviteModels.swift */; };
+		BA59C62BDE23E361229241A6 /* InviteStudioState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF2C9C24E48277AC00557940 /* InviteStudioState.swift */; };
+		C461EFE996554D1E49381F9A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 94F40C2EBE063E6F4A8BD0ED /* Assets.xcassets */; };
+		CBEE2565DDA8746DD00757B4 /* CordialInvitesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0319042852DF18A559F6759 /* CordialInvitesApp.swift */; };
+		F66FDB7F1B0B65902369D79F /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 60D63DB2715F462AF5CFF713 /* AppIcon.svg */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C4964C8D440CD85EC794CE52 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3C25078B4E8382AA8E53E402 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FDCC0F8F6A6DF43BFAF3C4D2;
+			remoteInfo = CordialInvites;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		5F07A73F4619A08445B0B474 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		60D63DB2715F462AF5CFF713 /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
+		8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteGenerationService.swift; sourceTree = "<group>"; };
+		94F40C2EBE063E6F4A8BD0ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B55B5F3A4089FBA011E152EE /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
+		BDB58E718D42F427CBDEC421 /* CordialInvitesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CordialInvitesTests.swift; sourceTree = "<group>"; };
+		C0319042852DF18A559F6759 /* CordialInvitesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CordialInvitesApp.swift; sourceTree = "<group>"; };
+		C190408390B165AEE3714984 /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
+		CF2C9C24E48277AC00557940 /* InviteStudioState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteStudioState.swift; sourceTree = "<group>"; };
+		D14EBC0813AD58E0D4675720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D4942066265E81A5BA0D95D7 /* CordialInvitesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CordialInvitesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FBB6284B90C480A4A1DDB562 /* CordialInvites.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CordialInvites.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		225820B6BECA725A1421B869 = {
+			isa = PBXGroup;
+			children = (
+				8BB23584A1FF1B22296DB1A6 /* CordialInvites */,
+				9C9712AD9A2A00684D5F62CE /* CordialInvitesTests */,
+				6C3963C219F2842773AD0A09 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		44D844801556F60FE5423E88 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				60D63DB2715F462AF5CFF713 /* AppIcon.svg */,
+				94F40C2EBE063E6F4A8BD0ED /* Assets.xcassets */,
+				5F07A73F4619A08445B0B474 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		4E38A29CEF805B81F9CEB633 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				C190408390B165AEE3714984 /* Brand.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		5599F007553DFC92F84FD79A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B55B5F3A4089FBA011E152EE /* InviteModels.swift */,
+				CF2C9C24E48277AC00557940 /* InviteStudioState.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		6C3963C219F2842773AD0A09 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FBB6284B90C480A4A1DDB562 /* CordialInvites.app */,
+				D4942066265E81A5BA0D95D7 /* CordialInvitesTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8BB23584A1FF1B22296DB1A6 /* CordialInvites */ = {
+			isa = PBXGroup;
+			children = (
+				CF0FDBDD79C8E3A6674D36E1 /* App */,
+				5599F007553DFC92F84FD79A /* Models */,
+				44D844801556F60FE5423E88 /* Resources */,
+				995AE3D5181F1CBE8F412810 /* Services */,
+				4E38A29CEF805B81F9CEB633 /* Support */,
+				B98849B191ADFEDF76CA48B5 /* Views */,
+			);
+			path = CordialInvites;
+			sourceTree = "<group>";
+		};
+		995AE3D5181F1CBE8F412810 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		9C9712AD9A2A00684D5F62CE /* CordialInvitesTests */ = {
+			isa = PBXGroup;
+			children = (
+				BDB58E718D42F427CBDEC421 /* CordialInvitesTests.swift */,
+				D14EBC0813AD58E0D4675720 /* Info.plist */,
+			);
+			path = CordialInvitesTests;
+			sourceTree = "<group>";
+		};
+		B98849B191ADFEDF76CA48B5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		CF0FDBDD79C8E3A6674D36E1 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C0319042852DF18A559F6759 /* CordialInvitesApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2E3D8513FC9601BB971832C2 /* CordialInvitesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CE2C7D4112DB646D0E0CEEF3 /* Build configuration list for PBXNativeTarget "CordialInvitesTests" */;
+			buildPhases = (
+				D57B7816711BB8CAF66221C8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F3342177EDD811510D923CBC /* PBXTargetDependency */,
+			);
+			name = CordialInvitesTests;
+			packageProductDependencies = (
+			);
+			productName = CordialInvitesTests;
+			productReference = D4942066265E81A5BA0D95D7 /* CordialInvitesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FDCC0F8F6A6DF43BFAF3C4D2 /* CordialInvites */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F029C392D40887F6425BC50A /* Build configuration list for PBXNativeTarget "CordialInvites" */;
+			buildPhases = (
+				D7786C732451F15FBB6324B8 /* Sources */,
+				99AB12B74008CC6EA9E33B35 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CordialInvites;
+			packageProductDependencies = (
+			);
+			productName = CordialInvites;
+			productReference = FBB6284B90C480A4A1DDB562 /* CordialInvites.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3C25078B4E8382AA8E53E402 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					2E3D8513FC9601BB971832C2 = {
+						DevelopmentTeam = CNCDUB33GL;
+					};
+					FDCC0F8F6A6DF43BFAF3C4D2 = {
+						DevelopmentTeam = CNCDUB33GL;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 407DD0B508AD70FCE5CEBDBB /* Build configuration list for PBXProject "CordialInvites" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 225820B6BECA725A1421B869;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6C3963C219F2842773AD0A09 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FDCC0F8F6A6DF43BFAF3C4D2 /* CordialInvites */,
+				2E3D8513FC9601BB971832C2 /* CordialInvitesTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		99AB12B74008CC6EA9E33B35 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F66FDB7F1B0B65902369D79F /* AppIcon.svg in Resources */,
+				C461EFE996554D1E49381F9A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D57B7816711BB8CAF66221C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				41C71244BEF52B7C35F00FFC /* CordialInvitesTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D7786C732451F15FBB6324B8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8FFB9B2EA3C5F84D3269F25A /* Brand.swift in Sources */,
+				0EC66B2C4A382612DFFDA228 /* ContentView.swift in Sources */,
+				CBEE2565DDA8746DD00757B4 /* CordialInvitesApp.swift in Sources */,
+				300BC99762EB66FE07903A89 /* InviteGenerationService.swift in Sources */,
+				9105E62F83D7D7CE6B125581 /* InviteModels.swift in Sources */,
+				BA59C62BDE23E361229241A6 /* InviteStudioState.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F3342177EDD811510D923CBC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FDCC0F8F6A6DF43BFAF3C4D2 /* CordialInvites */;
+			targetProxy = C4964C8D440CD85EC794CE52 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		016B8DD8B940DFF688DE27DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = CordialInvites/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cordialinvites.app;
+				PRODUCT_NAME = CordialInvites;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		142B002F626737E9CC93CEAD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				API_BASE_URL = "https://invite-generator-two.vercel.app";
+				API_GENERATE_PATH = api/generate;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = CNCDUB33GL;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		6450BD52E24A666271491F89 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = CordialInvitesTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cordialinvites.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CordialInvites.app/CordialInvites";
+			};
+			name = Debug;
+		};
+		7C67C2D96D1B1BBEFA454514 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = CordialInvitesTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cordialinvites.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CordialInvites.app/CordialInvites";
+			};
+			name = Release;
+		};
+		BD13FB1F588F12A5BBF57952 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = CordialInvites/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cordialinvites.app;
+				PRODUCT_NAME = CordialInvites;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D5D66CB7790769B6E20D5976 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				API_BASE_URL = "https://invite-generator-two.vercel.app";
+				API_GENERATE_PATH = api/generate;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = CNCDUB33GL;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		407DD0B508AD70FCE5CEBDBB /* Build configuration list for PBXProject "CordialInvites" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D5D66CB7790769B6E20D5976 /* Debug */,
+				142B002F626737E9CC93CEAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CE2C7D4112DB646D0E0CEEF3 /* Build configuration list for PBXNativeTarget "CordialInvitesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6450BD52E24A666271491F89 /* Debug */,
+				7C67C2D96D1B1BBEFA454514 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F029C392D40887F6425BC50A /* Build configuration list for PBXNativeTarget "CordialInvites" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BD13FB1F588F12A5BBF57952 /* Debug */,
+				016B8DD8B940DFF688DE27DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3C25078B4E8382AA8E53E402 /* Project object */;
+}

@@ -1,0 +1,45 @@
+name: CordialInvites
+options:
+  bundleIdPrefix: com.cordialinvites
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    API_BASE_URL: https://invite-generator-two.vercel.app
+    API_GENERATE_PATH: api/generate
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    DEVELOPMENT_TEAM: CNCDUB33GL
+    SWIFT_VERSION: 6.0
+    IPHONEOS_DEPLOYMENT_TARGET: 18.0
+    TARGETED_DEVICE_FAMILY: 1
+packages: {}
+targets:
+  CordialInvites:
+    type: application
+    platform: iOS
+    sources:
+      - CordialInvites
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cordialinvites.app
+        PRODUCT_NAME: CordialInvites
+        INFOPLIST_FILE: CordialInvites/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+    scheme:
+      testTargets:
+        - CordialInvitesTests
+  CordialInvitesTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - CordialInvitesTests
+    dependencies:
+      - target: CordialInvites
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cordialinvites.app.tests
+        INFOPLIST_FILE: CordialInvitesTests/Info.plist
