@@ -32,6 +32,8 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>API_BASE_URL</key>
-	<string>https://invite-generator-two.vercel.app</string>
+	<string>$(API_BASE_URL)</string>
+	<key>API_GENERATE_PATH</key>
+	<string>$(API_GENERATE_PATH)</string>
 </dict>
 </plist>

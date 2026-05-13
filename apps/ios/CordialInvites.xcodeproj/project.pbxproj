@@ -31,7 +31,7 @@
 /* Begin PBXFileReference section */
 		40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5F07A73F4619A08445B0B474 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		60D63DB2715F462AF5CFF713 /* AppIcon.svg */ = {isa = PBXFileReference; lastKnownFileType = text; path = AppIcon.svg; sourceTree = "<group>"; };
+		60D63DB2715F462AF5CFF713 /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteGenerationService.swift; sourceTree = "<group>"; };
 		94F40C2EBE063E6F4A8BD0ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B55B5F3A4089FBA011E152EE /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
@@ -41,7 +41,7 @@
 		CF2C9C24E48277AC00557940 /* InviteStudioState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteStudioState.swift; sourceTree = "<group>"; };
 		D14EBC0813AD58E0D4675720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D4942066265E81A5BA0D95D7 /* CordialInvitesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CordialInvitesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FBB6284B90C480A4A1DDB562 /* CordialInvites.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CordialInvites.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FBB6284B90C480A4A1DDB562 /* CordialInvites.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CordialInvites.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -185,9 +185,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2E3D8513FC9601BB971832C2 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = CNCDUB33GL;
 					};
 					FDCC0F8F6A6DF43BFAF3C4D2 = {
+						DevelopmentTeam = CNCDUB33GL;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -263,7 +264,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = CNCDUB33GL;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = CordialInvites/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -281,6 +281,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				API_BASE_URL = "https://invite-generator-two.vercel.app";
+				API_GENERATE_PATH = api/generate;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -313,7 +315,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = CNCDUB33GL;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -377,7 +379,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = CNCDUB33GL;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				INFOPLIST_FILE = CordialInvites/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -395,6 +396,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				API_BASE_URL = "https://invite-generator-two.vercel.app";
+				API_GENERATE_PATH = api/generate;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -427,7 +430,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = CNCDUB33GL;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;

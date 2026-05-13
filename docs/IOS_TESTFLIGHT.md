@@ -41,7 +41,7 @@ That endpoint keeps `OPENAI_API_KEY` server-side and requests:
 To point the app at another backend, change `API_BASE_URL` in:
 
 ```text
-apps/ios/CordialInvites/Resources/Info.plist
+apps/ios/project.yml
 ```
 
 ## TestFlight

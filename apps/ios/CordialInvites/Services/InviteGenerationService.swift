@@ -32,18 +32,27 @@ enum InviteGenerationError: LocalizedError {
 @MainActor
 final class OpenAIInviteGenerationService: InviteGenerationService {
     private let session: URLSession
-    private let baseURL: URL
+    private let baseURL: URL?
+    private let generatePath: String
 
     init(session: URLSession = .shared) {
         self.session = session
-        let configured = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
-        self.baseURL = URL(string: configured ?? "https://invite-generator.vercel.app")!
+        let configuredBaseURL = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
+        let configuredGeneratePath = Bundle.main.object(forInfoDictionaryKey: "API_GENERATE_PATH") as? String
+        self.baseURL = configuredBaseURL.flatMap(URL.init(string:))
+        self.generatePath = configuredGeneratePath ?? ""
     }
 
     func generateInvite(intake: InviteIntake) async throws -> InviteGenerationResult {
-        guard let url = URL(string: "/api/generate", relativeTo: baseURL) else {
+        guard let baseURL, !generatePath.trimmed.isEmpty else {
             throw InviteGenerationError.invalidBaseURL
         }
+
+        let url = generatePath
+            .split(separator: "/")
+            .reduce(baseURL) { partialURL, component in
+                partialURL.appending(path: String(component))
+            }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

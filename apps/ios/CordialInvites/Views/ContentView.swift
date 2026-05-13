@@ -121,7 +121,7 @@ private struct ActionPanel: View {
             .foregroundStyle(.white)
             .background(state.intake.isReady ? Brand.clay : Brand.clay.opacity(0.45))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .disabled(state.isGenerating)
+            .disabled(state.isGenerating || !state.intake.isReady)
 
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal")

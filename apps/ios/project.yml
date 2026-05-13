@@ -6,9 +6,11 @@ options:
   createIntermediateGroups: true
 settings:
   base:
+    API_BASE_URL: https://invite-generator-two.vercel.app
+    API_GENERATE_PATH: api/generate
     MARKETING_VERSION: 0.1.0
     CURRENT_PROJECT_VERSION: 1
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: CNCDUB33GL
     SWIFT_VERSION: 6.0
     IPHONEOS_DEPLOYMENT_TARGET: 18.0
     TARGETED_DEVICE_FAMILY: 1
