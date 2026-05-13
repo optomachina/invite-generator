@@ -54,34 +54,34 @@ private struct PromptIntakeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            ZStack(alignment: .topLeading) {
-                TextEditor(text: $state.promptText)
-                    .font(.system(.title3, design: .serif))
-                    .lineSpacing(5)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 172)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 16)
-                    .padding(.trailing, 62)
-                    .background(Brand.paper)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Brand.line.opacity(0.85), lineWidth: 1)
-                    }
-
+            VStack(alignment: .leading, spacing: 12) {
                 if state.promptText.isEmpty {
                     Text(state.promptStarter)
                         .font(.system(.title3, design: .serif))
                         .italic()
                         .foregroundStyle(Brand.ink.opacity(0.38))
                         .lineSpacing(5)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 24)
-                        .padding(.trailing, 72)
-                        .allowsHitTesting(false)
+                        .padding(.trailing, 64)
                 }
 
+                TextField("Type or speak your invite details", text: $state.promptText, axis: .vertical)
+                    .font(.system(.title3, design: .serif))
+                    .foregroundStyle(Brand.ink)
+                    .lineSpacing(5)
+                    .lineLimit(4...10)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled(false)
+                    .submitLabel(.done)
+                    .padding(.trailing, 64)
+            }
+            .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 18)
+            .background(Brand.paper)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Brand.line.opacity(0.85), lineWidth: 1)
             }
             .overlay(alignment: .bottomTrailing) {
                 Button {
@@ -100,8 +100,8 @@ private struct PromptIntakeView: View {
                 .padding(14)
             }
 
-            if state.speech.isRecording {
-                RecordingIndicator()
+            if state.speech.isRecording || state.voiceMessage != nil {
+                RecordingIndicator(message: state.voiceMessage ?? "Listening...")
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -140,12 +140,14 @@ private struct PromptIntakeView: View {
 }
 
 private struct RecordingIndicator: View {
+    var message: String
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "waveform")
                 .font(.headline)
                 .foregroundStyle(Brand.clay)
-            Text("Listening...")
+            Text(message)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Brand.ink)
             Spacer()
