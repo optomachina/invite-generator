@@ -20,6 +20,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Cordial uses the microphone to transcribe event details into your invite prompt.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Cordial uses speech recognition to turn your voice note into invitation details.</string>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UILaunchScreen</key>
