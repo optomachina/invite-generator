@@ -9,7 +9,8 @@ enum Brand {
     static let line = Color(red: 0.83, green: 0.78, blue: 0.68)
 
     static let eventTypes = [
-        "Birthday", "Baby shower", "Graduation", "Wedding", "Dinner", "Milestone", "Other"
+        "Kid's birthday", "Baby shower", "Milestone birthday", "Dinner party",
+        "Bridal shower", "Housewarming", "Graduation", "Something else"
     ]
 
     static let vibes = [

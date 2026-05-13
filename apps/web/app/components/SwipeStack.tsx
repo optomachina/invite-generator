@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { SwipeCard } from "@/app/components/SwipeCard";
 import type { SwipeCardData } from "@/app/components/swipe-types";
 import {
@@ -174,7 +174,7 @@ export function SwipeStack({ cards, sessionKey, onRoundComplete }: Readonly<Swip
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.7}
                 dragSnapToOrigin
-                onDragEnd={(_, info) => {
+                onDragEnd={(_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
                   if (!canSwipe) return;
                   const direction = shouldCommit(info.offset.x, info.velocity.x);
                   if (direction) dismiss(card, direction);

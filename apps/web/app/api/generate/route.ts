@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { estimateCostUsd } from "@/lib/pricing";
-import { buildPrompt, validateIntake, validateSettings } from "@/lib/intake";
+import { buildPrompt, validateIntake, validateSettings, type Intake } from "@/lib/intake";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 // High-quality 1024x1536 generations regularly run 60-180s. Vercel Pro
 // allows up to 800s; 300 leaves headroom without inviting runaway jobs.
 export const maxDuration = 300;
+
+function validateRawPrompt(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const prompt = raw.trim();
+  return prompt.length > 0 ? prompt : null;
+}
+
+function buildPromptFromDescription(description: string): string {
+  return [
+    `Create an editorial-quality custom invitation design from this host description: "${description}".`,
+    `Composition: portrait 5x7, leave clean negative space where helpful for event text,`,
+    `but include the important invitation details directly in the design when they are clear from the description.`,
+    `Style references: boutique stationer, hand-illustrated, warm cream paper, restrained color palette,`,
+    `subtle grain, generous whitespace, polished typography, not a generic template.`,
+    `Avoid: stock-photo aesthetic, generic SaaS color palette, purple/indigo gradients, slate/zinc neutrals.`,
+    `Make any rendered text crisp, legible, and spelled exactly as provided.`,
+  ].join(" ");
+}
 
 export async function POST(req: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -28,17 +46,18 @@ export async function POST(req: Request) {
   }
 
   const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const rawPrompt = validateRawPrompt(b.prompt);
   const intake = validateIntake(b.intake ?? body);
-  if (!intake) {
-    logger.warn("generate.invalid_intake");
+  if (!rawPrompt && !intake) {
+    logger.warn("generate.invalid_request");
     return NextResponse.json(
-      { error: "invalid intake: requires non-empty honoree, event, date, time, location, vibe" },
+      { error: "invalid request: provide a non-empty prompt or structured intake" },
       { status: 400 },
     );
   }
   const settings = validateSettings(b.settings);
 
-  const prompt = buildPrompt(intake);
+  const prompt = rawPrompt ? buildPromptFromDescription(rawPrompt) : buildPrompt(intake as Intake);
   const openai = new OpenAI({ apiKey });
 
   const t0 = Date.now();

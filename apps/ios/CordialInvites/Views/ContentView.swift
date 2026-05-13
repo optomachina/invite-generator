@@ -10,7 +10,7 @@ struct ContentView: View {
                 ScrollView {
                     VStack(spacing: 22) {
                         HeroView()
-                        IntakeView(state: state)
+                        PromptIntakeView(state: state)
                         ActionPanel(state: state)
                         ResultView(state: state)
                     }
@@ -34,12 +34,12 @@ struct ContentView: View {
 private struct HeroView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Boutique invites, sketched while you plan.")
+            Text("Tell us about your event.")
                 .font(.system(size: 38, weight: .semibold, design: .serif))
                 .foregroundStyle(Brand.ink)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("Describe the occasion. Cordial drafts a tasteful 5x7 invitation you can save or share.")
+            Text("Paste details or voice-note it. Cordial turns the moment into a tasteful 5x7 invite.")
                 .font(.callout)
                 .foregroundStyle(Brand.ink.opacity(0.72))
                 .lineSpacing(2)
@@ -49,7 +49,121 @@ private struct HeroView: View {
     }
 }
 
-private struct IntakeView: View {
+private struct PromptIntakeView: View {
+    @ObservedObject var state: InviteStudioState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $state.promptText)
+                    .font(.system(.title3, design: .serif))
+                    .lineSpacing(5)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 142)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 16)
+                    .padding(.trailing, 62)
+                    .background(Brand.paper)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Brand.line.opacity(0.85), lineWidth: 1)
+                    }
+
+                if state.promptText.isEmpty {
+                    Text(state.promptStarter)
+                        .font(.system(.title3, design: .serif))
+                        .italic()
+                        .foregroundStyle(Brand.ink.opacity(0.38))
+                        .lineSpacing(5)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 24)
+                        .padding(.trailing, 72)
+                        .allowsHitTesting(false)
+                }
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            Task { await state.toggleRecording() }
+                        } label: {
+                            Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 54, height: 54)
+                                .background(state.speech.isRecording ? Brand.clay : Brand.ink)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(state.speech.isRecording ? "Stop recording" : "Start voice input")
+                        .padding(14)
+                    }
+                }
+            }
+
+            if state.speech.isRecording {
+                RecordingIndicator()
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Or start with a moment")
+                    .font(.caption.weight(.semibold))
+                    .tracking(3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(Brand.ink.opacity(0.45))
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 10)], alignment: .leading, spacing: 10) {
+                    ForEach(Brand.eventTypes, id: \.self) { value in
+                        let isSelected = state.selectedPromptStarterChip == value
+                        Button {
+                            state.applyPromptStarter(value)
+                        } label: {
+                            Text(value)
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
+                                .foregroundStyle(isSelected ? .white : Brand.ink)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .padding(.horizontal, 10)
+                                .background(isSelected ? Brand.ink : Brand.paper.opacity(0.55))
+                                .clipShape(Capsule())
+                                .overlay {
+                                    Capsule().stroke(Brand.line.opacity(0.9), lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct RecordingIndicator: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "waveform")
+                .font(.headline)
+                .foregroundStyle(Brand.clay)
+            Text("Listening...")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Brand.ink)
+            Spacer()
+            Text("Tap mic when done")
+                .font(.caption)
+                .foregroundStyle(Brand.ink.opacity(0.58))
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 48)
+        .background(Brand.paper.opacity(0.62))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct StructuredIntakeView: View {
     @ObservedObject var state: InviteStudioState
 
     var body: some View {
@@ -109,9 +223,9 @@ private struct ActionPanel: View {
                         ProgressView()
                             .tint(.white)
                     } else {
-                        Image(systemName: "wand.and.sparkles")
+                        Image(systemName: "arrow.right")
                     }
-                    Text(state.isGenerating ? "Sketching your invite" : "Sketch Invite")
+                    Text(state.isGenerating ? "Designing your invite" : "Design 1 invite")
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
@@ -119,13 +233,13 @@ private struct ActionPanel: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white)
-            .background(state.intake.isReady ? Brand.clay : Brand.clay.opacity(0.45))
+            .background(state.canGenerate ? Brand.clay : Brand.clay.opacity(0.45))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .disabled(state.isGenerating || !state.intake.isReady)
+            .disabled(!state.canGenerate)
 
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.seal")
-                Text("One low-quality OpenAI image generation per run. No payment in this beta.")
+                Text("Free to preview. One low-quality OpenAI image generation per run.")
             }
             .font(.caption)
             .foregroundStyle(Brand.ink.opacity(0.58))
@@ -164,7 +278,7 @@ private struct ResultView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .padding(10)
                 } else if state.isGenerating {
-                    GeneratingView(intake: state.intake)
+                    GeneratingView(prompt: state.promptText)
                 } else {
                     EmptyPreview()
                 }
@@ -200,17 +314,17 @@ private struct ResultView: View {
 }
 
 private struct GeneratingView: View {
-    let intake: InviteIntake
+    let prompt: String
 
     var body: some View {
         VStack(spacing: 14) {
             ProgressView()
                 .scaleEffect(1.35)
                 .tint(Brand.clay)
-            Text("Adding a dash of \(intake.honoree.trimmed.isEmpty ? "charm" : "\(intake.honoree)'s charm")...")
+            Text("Sketching the first concept...")
                 .font(.system(.title3, design: .serif, weight: .semibold))
                 .foregroundStyle(Brand.ink)
-            Text("This can take a minute. We are sketching one polished concept instead of a template stack.")
+            Text("This can take a minute. Cordial is turning your note into a polished invitation.")
                 .font(.footnote)
                 .foregroundStyle(Brand.ink.opacity(0.62))
                 .multilineTextAlignment(.center)
