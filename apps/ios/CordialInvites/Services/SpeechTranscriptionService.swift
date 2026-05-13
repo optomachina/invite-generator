@@ -31,6 +31,13 @@ final class SpeechTranscriptionService: ObservableObject {
     }
 
     func start(onTranscript: @escaping (String) -> Void) async throws {
+        if ProcessInfo.processInfo.arguments.contains("-CordialUITestFakeSpeech") {
+            self.onTranscript = onTranscript
+            isRecording = true
+            onTranscript("Backyard birthday brunch on Saturday at 10am")
+            return
+        }
+
         guard recognizer?.isAvailable == true else {
             throw SpeechTranscriptionError.unavailable
         }
@@ -95,14 +102,14 @@ final class SpeechTranscriptionService: ObservableObject {
         }
     }
 
-    private func requestAuthorization() async -> Bool {
+    private nonisolated func requestAuthorization() async -> Bool {
         async let speechAllowed = requestSpeechAuthorization()
         async let micAllowed = requestMicrophoneAuthorization()
         let allowed = await (speechAllowed, micAllowed)
         return allowed.0 && allowed.1
     }
 
-    private func requestSpeechAuthorization() async -> Bool {
+    private nonisolated func requestSpeechAuthorization() async -> Bool {
         await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status == .authorized)
@@ -110,7 +117,7 @@ final class SpeechTranscriptionService: ObservableObject {
         }
     }
 
-    private func requestMicrophoneAuthorization() async -> Bool {
+    private nonisolated func requestMicrophoneAuthorization() async -> Bool {
         await withCheckedContinuation { continuation in
             if #available(iOS 17.0, *) {
                 AVAudioApplication.requestRecordPermission { allowed in

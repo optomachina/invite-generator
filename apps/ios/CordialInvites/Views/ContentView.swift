@@ -88,7 +88,7 @@ private struct PromptIntakeView: View {
                 }
                 .overlay(alignment: .bottomTrailing) {
                     Button {
-                        Task { await state.toggleRecording() }
+                        state.toggleRecording()
                     } label: {
                         Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
                             .font(.system(size: 22, weight: .semibold))
