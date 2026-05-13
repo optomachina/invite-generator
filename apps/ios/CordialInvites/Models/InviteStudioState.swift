@@ -79,6 +79,7 @@ final class InviteStudioState: ObservableObject {
             voiceMessage = "Voice input stopped."
             return
         }
+        guard recordingSessionID == nil else { return }
 
         errorMessage = nil
         voiceMessage = "Requesting voice access..."

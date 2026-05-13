@@ -11,14 +11,16 @@ final class PromptIntakeUITests: XCTestCase {
         app.launchArguments = ["-CordialUITestFakeSpeech"]
         app.launch()
 
-        let promptField = app.descendants(matching: .any)["invitePromptField"]
+        let promptField = app.textFields["invitePromptField"]
         XCTAssertTrue(promptField.waitForExistence(timeout: 5))
+        let designButton = app.buttons["Design 1 invite"]
+        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
+        XCTAssertFalse(designButton.isEnabled)
 
         promptField.tap()
         app.typeText("Backyard birthday brunch on Saturday at 10am")
 
-        XCTAssertTrue(app.buttons["Design 1 invite"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.buttons["Design 1 invite"].isEnabled)
+        XCTAssertTrue(designButton.isEnabled)
     }
 
     @MainActor
@@ -44,12 +46,17 @@ final class PromptIntakeUITests: XCTestCase {
         voiceButton.tap()
 
         XCTAssertTrue(hasVoiceFeedback(in: app))
-        XCTAssertTrue(app.buttons["Design 1 invite"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.buttons["Design 1 invite"].isEnabled)
+        let promptField = app.textFields["invitePromptField"]
+        XCTAssertTrue(promptField.waitForExistence(timeout: 2))
+        XCTAssertEqual(promptField.value as? String, "Backyard birthday brunch on Saturday at 10am")
+        let designButton = app.buttons["Design 1 invite"]
+        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(designButton.isEnabled)
     }
 
     @MainActor
     private func hasVoiceFeedback(in app: XCUIApplication) -> Bool {
+        let feedbackTimeout: TimeInterval = 2
         let voiceFeedback = app.staticTexts["Requesting voice access..."]
         let unavailableFeedback = app.staticTexts["Voice input is not available on this device."]
         let permissionFeedback = app.staticTexts["Allow Speech Recognition access, or type the details instead."]
@@ -57,11 +64,11 @@ final class PromptIntakeUITests: XCTestCase {
         let combinedPermissionFeedback = app.staticTexts["Allow microphone and speech recognition access, or type the details instead."]
         let listeningFeedback = app.staticTexts["Listening..."]
 
-        return listeningFeedback.waitForExistence(timeout: 2) ||
-            voiceFeedback.waitForExistence(timeout: 1) ||
-            unavailableFeedback.waitForExistence(timeout: 2) ||
-            permissionFeedback.waitForExistence(timeout: 2) ||
-            microphoneFeedback.waitForExistence(timeout: 2) ||
-            combinedPermissionFeedback.waitForExistence(timeout: 2)
+        return listeningFeedback.waitForExistence(timeout: feedbackTimeout) ||
+            voiceFeedback.waitForExistence(timeout: feedbackTimeout) ||
+            unavailableFeedback.waitForExistence(timeout: feedbackTimeout) ||
+            permissionFeedback.waitForExistence(timeout: feedbackTimeout) ||
+            microphoneFeedback.waitForExistence(timeout: feedbackTimeout) ||
+            combinedPermissionFeedback.waitForExistence(timeout: feedbackTimeout)
     }
 }
