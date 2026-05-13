@@ -4,14 +4,17 @@ import Speech
 
 enum SpeechTranscriptionError: LocalizedError {
     case unavailable
-    case notAuthorized
+    case microphoneNotAuthorized
+    case speechRecognitionNotAuthorized
 
     var errorDescription: String? {
         switch self {
         case .unavailable:
             "Voice input is not available on this device."
-        case .notAuthorized:
-            "Allow microphone and speech recognition access, or type the details instead."
+        case .microphoneNotAuthorized:
+            "Allow microphone access, or type the details instead."
+        case .speechRecognitionNotAuthorized:
+            "Allow Speech Recognition access, or type the details instead."
         }
     }
 }
@@ -34,9 +37,7 @@ final class SpeechTranscriptionService: ObservableObject {
         guard recognizer?.isAvailable == true else {
             throw SpeechTranscriptionError.unavailable
         }
-        guard await requestAuthorization() else {
-            throw SpeechTranscriptionError.notAuthorized
-        }
+        try await requestAuthorization()
 
         stop()
         self.onTranscript = onTranscript
@@ -95,11 +96,13 @@ final class SpeechTranscriptionService: ObservableObject {
         }
     }
 
-    private func requestAuthorization() async -> Bool {
-        async let speechAllowed = requestSpeechAuthorization()
-        async let micAllowed = requestMicrophoneAuthorization()
-        let allowed = await (speechAllowed, micAllowed)
-        return allowed.0 && allowed.1
+    private func requestAuthorization() async throws {
+        guard await requestSpeechAuthorization() else {
+            throw SpeechTranscriptionError.speechRecognitionNotAuthorized
+        }
+        guard await requestMicrophoneAuthorization() else {
+            throw SpeechTranscriptionError.microphoneNotAuthorized
+        }
     }
 
     private func requestSpeechAuthorization() async -> Bool {

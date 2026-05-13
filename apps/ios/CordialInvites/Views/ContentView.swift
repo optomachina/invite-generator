@@ -59,7 +59,7 @@ private struct PromptIntakeView: View {
                     .font(.system(.title3, design: .serif))
                     .lineSpacing(5)
                     .scrollContentBackground(.hidden)
-                    .frame(minHeight: 142)
+                    .frame(minHeight: 172)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 16)
                     .padding(.trailing, 62)
@@ -82,25 +82,22 @@ private struct PromptIntakeView: View {
                         .allowsHitTesting(false)
                 }
 
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button {
-                            Task { await state.toggleRecording() }
-                        } label: {
-                            Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 54, height: 54)
-                                .background(state.speech.isRecording ? Brand.clay : Brand.ink)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(state.speech.isRecording ? "Stop recording" : "Start voice input")
-                        .padding(14)
-                    }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                Button {
+                    Task { await state.toggleRecording() }
+                } label: {
+                    Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 54, height: 54)
+                        .background(state.speech.isRecording ? Brand.clay : Brand.ink)
+                        .clipShape(Circle())
+                        .shadow(color: Brand.ink.opacity(0.12), radius: 8, y: 4)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(state.speech.isRecording ? "Stop recording" : "Start voice input")
+                .padding(14)
             }
 
             if state.speech.isRecording {
