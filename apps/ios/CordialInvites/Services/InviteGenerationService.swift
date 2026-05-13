@@ -72,19 +72,23 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
             throw InviteGenerationError.badStatus(http.statusCode, message)
         }
 
-        let decoded = try JSONDecoder().decode(GenerateResponse.self, from: data)
-        guard let first = decoded.images.first else {
-            throw InviteGenerationError.missingImage
-        }
-        guard let imageData = Data(base64Encoded: first.b64Json),
-              let uiImage = UIImage(data: imageData) else {
-            throw InviteGenerationError.corruptImage
-        }
+        let decoded = try await Task.detached(priority: .userInitiated) {
+            let decoded = try JSONDecoder().decode(GenerateResponse.self, from: data)
+            guard let first = decoded.images.first else {
+                throw InviteGenerationError.missingImage
+            }
+            guard let imageData = Data(base64Encoded: first.b64Json),
+                  let uiImage = UIImage(data: imageData) else {
+                throw InviteGenerationError.corruptImage
+            }
 
-        let seconds = Double(decoded.ms) / 1000
+            return (response: decoded, image: uiImage)
+        }.value
+
+        let seconds = Double(decoded.response.ms) / 1000
         return InviteGenerationResult(
-            image: uiImage,
-            prompt: decoded.prompt,
+            image: decoded.image,
+            prompt: decoded.response.prompt,
             elapsedText: "\(seconds.formatted(.number.precision(.fractionLength(1))))s"
         )
     }
