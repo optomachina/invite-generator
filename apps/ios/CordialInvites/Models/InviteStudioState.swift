@@ -12,6 +12,7 @@ final class InviteStudioState: ObservableObject {
     @Published var elapsedText = ""
     @Published var isGenerating = false
     @Published var errorMessage: String?
+    @Published var voiceMessage: String?
     @Published var selectedVibe = "Garden party"
     @Published var selectedEventType = "Birthday"
 
@@ -71,30 +72,38 @@ final class InviteStudioState: ObservableObject {
         selectedPromptStarter = starterText(for: value)
     }
 
-    func toggleRecording() async {
+    func toggleRecording() {
         if speech.isRecording {
             recordingSessionID = nil
             speech.stop()
+            voiceMessage = "Voice input stopped."
             return
         }
+        guard recordingSessionID == nil else { return }
 
         errorMessage = nil
-        do {
-            let existingText = promptText.trimmed
-            let sessionID = UUID()
-            recordingSessionID = sessionID
-            try await speech.start { [weak self] transcript in
-                guard let self else { return }
-                guard self.speech.isRecording, self.recordingSessionID == sessionID else { return }
-                if existingText.isEmpty {
-                    self.promptText = transcript
-                } else {
-                    self.promptText = "\(existingText) \(transcript)"
+        voiceMessage = "Requesting voice access..."
+        let existingText = promptText.trimmed
+        let sessionID = UUID()
+        recordingSessionID = sessionID
+
+        Task {
+            do {
+                try await speech.start { [weak self] transcript in
+                    guard let self else { return }
+                    guard self.speech.isRecording, self.recordingSessionID == sessionID else { return }
+                    if existingText.isEmpty {
+                        self.promptText = transcript
+                    } else {
+                        self.promptText = "\(existingText) \(transcript)"
+                    }
                 }
+                voiceMessage = "Listening..."
+            } catch {
+                recordingSessionID = nil
+                voiceMessage = error.localizedDescription
+                errorMessage = error.localizedDescription
             }
-        } catch {
-            recordingSessionID = nil
-            errorMessage = error.localizedDescription
         }
     }
 

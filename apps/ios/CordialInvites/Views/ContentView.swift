@@ -51,60 +51,61 @@ private struct HeroView: View {
 
 private struct PromptIntakeView: View {
     @ObservedObject var state: InviteStudioState
+    @FocusState private var isPromptFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            ZStack(alignment: .topLeading) {
-                TextEditor(text: $state.promptText)
-                    .font(.system(.title3, design: .serif))
-                    .lineSpacing(5)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 142)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 16)
-                    .padding(.trailing, 62)
-                    .background(Brand.paper)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Brand.line.opacity(0.85), lineWidth: 1)
+            TextField(
+                "",
+                text: $state.promptText,
+                prompt: Text(state.promptStarter)
+                    .foregroundStyle(Brand.ink.opacity(0.38))
+                    .italic(),
+                axis: .vertical
+            )
+                .focused($isPromptFocused)
+                .accessibilityIdentifier("invitePromptField")
+                .font(.system(.title3, design: .serif))
+                .foregroundStyle(Brand.ink)
+                .lineSpacing(5)
+                .lineLimit(5...10)
+                .textInputAutocapitalization(.sentences)
+                .autocorrectionDisabled(false)
+                .submitLabel(.done)
+                .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
+                .padding(.leading, 16)
+                .padding(.trailing, 88)
+                .padding(.vertical, 18)
+                .background(Brand.paper)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Brand.line.opacity(0.85), lineWidth: 1)
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .onTapGesture {
+                    isPromptFocused = true
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        state.toggleRecording()
+                    } label: {
+                        Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 64, height: 64)
+                            .background(state.speech.isRecording ? Brand.clay : Brand.ink)
+                            .clipShape(Circle())
+                            .shadow(color: Brand.ink.opacity(0.12), radius: 8, y: 4)
                     }
-
-                if state.promptText.isEmpty {
-                    Text(state.promptStarter)
-                        .font(.system(.title3, design: .serif))
-                        .italic()
-                        .foregroundStyle(Brand.ink.opacity(0.38))
-                        .lineSpacing(5)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 24)
-                        .padding(.trailing, 72)
-                        .allowsHitTesting(false)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("voiceInputButton")
+                    .accessibilityLabel(state.speech.isRecording ? "Stop recording" : "Start voice input")
+                    .padding(14)
                 }
 
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button {
-                            Task { await state.toggleRecording() }
-                        } label: {
-                            Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 54, height: 54)
-                                .background(state.speech.isRecording ? Brand.clay : Brand.ink)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(state.speech.isRecording ? "Stop recording" : "Start voice input")
-                        .padding(14)
-                    }
-                }
-            }
-
-            if state.speech.isRecording {
-                RecordingIndicator()
+            if state.speech.isRecording || state.voiceMessage != nil {
+                RecordingIndicator(message: state.voiceMessage ?? "Listening...")
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -143,12 +144,14 @@ private struct PromptIntakeView: View {
 }
 
 private struct RecordingIndicator: View {
+    var message: String
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "waveform")
                 .font(.headline)
                 .foregroundStyle(Brand.clay)
-            Text("Listening...")
+            Text(message)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Brand.ink)
             Spacer()

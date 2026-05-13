@@ -11,6 +11,7 @@
 		148D704E07AC66F99FC09CDF /* SpeechTranscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1637AC6A661C4B7220F8EBB1 /* SpeechTranscriptionService.swift */; };
 		300BC99762EB66FE07903A89 /* InviteGenerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */; };
 		41C71244BEF52B7C35F00FFC /* CordialInvitesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDB58E718D42F427CBDEC421 /* CordialInvitesTests.swift */; };
+		7CEF4F480DE64BA74E5E62F2 /* PromptIntakeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2066347886EA394978B505BF /* PromptIntakeUITests.swift */; };
 		8FFB9B2EA3C5F84D3269F25A /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = C190408390B165AEE3714984 /* Brand.swift */; };
 		9105E62F83D7D7CE6B125581 /* InviteModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55B5F3A4089FBA011E152EE /* InviteModels.swift */; };
 		BA59C62BDE23E361229241A6 /* InviteStudioState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF2C9C24E48277AC00557940 /* InviteStudioState.swift */; };
@@ -20,6 +21,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		19E99526F79EE32ABB6DF62F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3C25078B4E8382AA8E53E402 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FDCC0F8F6A6DF43BFAF3C4D2;
+			remoteInfo = CordialInvites;
+		};
 		C4964C8D440CD85EC794CE52 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3C25078B4E8382AA8E53E402 /* Project object */;
@@ -31,9 +39,11 @@
 
 /* Begin PBXFileReference section */
 		1637AC6A661C4B7220F8EBB1 /* SpeechTranscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechTranscriptionService.swift; sourceTree = "<group>"; };
+		2066347886EA394978B505BF /* PromptIntakeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptIntakeUITests.swift; sourceTree = "<group>"; };
 		40AD12FD3ED02C13C6F7FC83 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5F07A73F4619A08445B0B474 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		60D63DB2715F462AF5CFF713 /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
+		6780C678FBCB2A4762CEC67A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8184E325FCF9329F0D4D9EF0 /* InviteGenerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteGenerationService.swift; sourceTree = "<group>"; };
 		94F40C2EBE063E6F4A8BD0ED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B55B5F3A4089FBA011E152EE /* InviteModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteModels.swift; sourceTree = "<group>"; };
@@ -43,6 +53,7 @@
 		CF2C9C24E48277AC00557940 /* InviteStudioState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteStudioState.swift; sourceTree = "<group>"; };
 		D14EBC0813AD58E0D4675720 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D4942066265E81A5BA0D95D7 /* CordialInvitesTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CordialInvitesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EFA336005B8090ADF0878A02 /* CordialInvitesUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CordialInvitesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBB6284B90C480A4A1DDB562 /* CordialInvites.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CordialInvites.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -52,6 +63,7 @@
 			children = (
 				8BB23584A1FF1B22296DB1A6 /* CordialInvites */,
 				9C9712AD9A2A00684D5F62CE /* CordialInvitesTests */,
+				DC46AD8CD0628F6E7D647F08 /* CordialInvitesUITests */,
 				6C3963C219F2842773AD0A09 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,6 +100,7 @@
 			children = (
 				FBB6284B90C480A4A1DDB562 /* CordialInvites.app */,
 				D4942066265E81A5BA0D95D7 /* CordialInvitesTests.xctest */,
+				EFA336005B8090ADF0878A02 /* CordialInvitesUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -139,9 +152,36 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		DC46AD8CD0628F6E7D647F08 /* CordialInvitesUITests */ = {
+			isa = PBXGroup;
+			children = (
+				6780C678FBCB2A4762CEC67A /* Info.plist */,
+				2066347886EA394978B505BF /* PromptIntakeUITests.swift */,
+			);
+			path = CordialInvitesUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0AE3864E8AB2EA3D10C1A3CC /* CordialInvitesUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A86325D46CAC6B7CFE91C952 /* Build configuration list for PBXNativeTarget "CordialInvitesUITests" */;
+			buildPhases = (
+				D023C62D2DD5ACC564C4AF28 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7625FDF54E50F0251B354E2E /* PBXTargetDependency */,
+			);
+			name = CordialInvitesUITests;
+			packageProductDependencies = (
+			);
+			productName = CordialInvitesUITests;
+			productReference = EFA336005B8090ADF0878A02 /* CordialInvitesUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		2E3D8513FC9601BB971832C2 /* CordialInvitesTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = CE2C7D4112DB646D0E0CEEF3 /* Build configuration list for PBXNativeTarget "CordialInvitesTests" */;
@@ -187,6 +227,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0AE3864E8AB2EA3D10C1A3CC = {
+						DevelopmentTeam = CNCDUB33GL;
+						TestTargetID = FDCC0F8F6A6DF43BFAF3C4D2;
+					};
 					2E3D8513FC9601BB971832C2 = {
 						DevelopmentTeam = CNCDUB33GL;
 					};
@@ -212,6 +256,7 @@
 			targets = (
 				FDCC0F8F6A6DF43BFAF3C4D2 /* CordialInvites */,
 				2E3D8513FC9601BB971832C2 /* CordialInvitesTests */,
+				0AE3864E8AB2EA3D10C1A3CC /* CordialInvitesUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -229,6 +274,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		D023C62D2DD5ACC564C4AF28 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7CEF4F480DE64BA74E5E62F2 /* PromptIntakeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D57B7816711BB8CAF66221C8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -254,6 +307,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		7625FDF54E50F0251B354E2E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FDCC0F8F6A6DF43BFAF3C4D2 /* CordialInvites */;
+			targetProxy = 19E99526F79EE32ABB6DF62F /* PBXContainerItemProxy */;
+		};
 		F3342177EDD811510D923CBC /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FDCC0F8F6A6DF43BFAF3C4D2 /* CordialInvites */;
@@ -342,6 +400,23 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
+		};
+		2C57F1CAD20F79A0E80467D4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = CordialInvitesUITests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cordialinvites.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = CordialInvites;
+			};
+			name = Debug;
 		};
 		6450BD52E24A666271491F89 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -465,6 +540,23 @@
 			};
 			name = Debug;
 		};
+		ED6800259BBB99FB3238E8F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				INFOPLIST_FILE = CordialInvitesUITests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.cordialinvites.app.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = CordialInvites;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -473,6 +565,15 @@
 			buildConfigurations = (
 				D5D66CB7790769B6E20D5976 /* Debug */,
 				142B002F626737E9CC93CEAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A86325D46CAC6B7CFE91C952 /* Build configuration list for PBXNativeTarget "CordialInvitesUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2C57F1CAD20F79A0E80467D4 /* Debug */,
+				ED6800259BBB99FB3238E8F0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
