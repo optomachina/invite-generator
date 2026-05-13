@@ -32,6 +32,12 @@ next-env.d.ts
 !.vscode/extensions.json
 !.vscode/settings.json
 
+# Xcode local build products
+xcuserdata/
+DerivedData/
+*.xcarchive/
+apps/ios/build/
+
 # Logs
 *.log
 npm-debug.log*
@@ -41,3 +47,4 @@ yarn-error.log*
 
 # OS junk
 Thumbs.db
+.vercel
