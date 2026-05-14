@@ -30,7 +30,10 @@ final class SpeechTranscriptionService: ObservableObject {
         recognizer = SFSpeechRecognizer(locale: locale)
     }
 
-    func start(onTranscript: @escaping (String) -> Void) async throws {
+    func start(
+        onTranscript: @escaping (String) -> Void,
+        onFinished: (() -> Void)? = nil
+    ) async throws {
         if ProcessInfo.processInfo.arguments.contains("-CordialUITestFakeSpeech") {
             self.onTranscript = onTranscript
             isRecording = true
@@ -73,6 +76,7 @@ final class SpeechTranscriptionService: ObservableObject {
                 }
                 if error != nil || result?.isFinal == true {
                     self?.cleanupRecognition(shouldCancelTask: false)
+                    onFinished?()
                 }
             }
         }
