@@ -71,4 +71,45 @@ final class PromptIntakeUITests: XCTestCase {
             microphoneFeedback.waitForExistence(timeout: feedbackTimeout) ||
             combinedPermissionFeedback.waitForExistence(timeout: feedbackTimeout)
     }
+
+    @MainActor
+    func testPromptCanGenerateInviteThroughUI() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-CordialUITestFakeGeneration"]
+        app.launch()
+
+        let promptField = app.textFields["invitePromptField"]
+        XCTAssertTrue(promptField.waitForExistence(timeout: 5))
+        promptField.tap()
+        app.typeText("Xavier is turning 15 and having a party at whiskey roads on April 24th at 6pm.")
+
+        let designButton = app.buttons["Design 1 invite"]
+        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(designButton.isEnabled)
+        designButton.tap()
+
+        XCTAssertTrue(app.buttons["Share Invite"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testGenerationErrorDetailsCanBeCopied() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-CordialUITestFailGeneration"]
+        app.launch()
+
+        let promptField = app.textFields["invitePromptField"]
+        XCTAssertTrue(promptField.waitForExistence(timeout: 5))
+        promptField.tap()
+        app.typeText("Xavier is turning 15 and having a party at whiskey roads on April 24th at 6pm.")
+
+        let designButton = app.buttons["Design 1 invite"]
+        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(designButton.isEnabled)
+        designButton.tap()
+
+        let copyDetailsButton = app.buttons["copyErrorDetailsButton"]
+        XCTAssertTrue(copyDetailsButton.waitForExistence(timeout: 5))
+        copyDetailsButton.tap()
+        XCTAssertTrue(app.buttons["Copied details"].waitForExistence(timeout: 2))
+    }
 }

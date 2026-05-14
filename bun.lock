@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "invite-generator",
+      "dependencies": {
+        "next": "^15.5.7",
+      },
     },
     "apps/web": {
       "name": "web",

@@ -12,6 +12,7 @@ final class InviteStudioState: ObservableObject {
     @Published var elapsedText = ""
     @Published var isGenerating = false
     @Published var errorMessage: String?
+    @Published var errorLog: String?
     @Published var voiceMessage: String?
     @Published var selectedVibe = "Garden party"
     @Published var selectedEventType = "Birthday"
@@ -46,11 +47,13 @@ final class InviteStudioState: ObservableObject {
         let description = promptText.trimmed
         guard !description.isEmpty else {
             errorMessage = "Tell us about the event before sketching."
+            errorLog = nil
             return
         }
 
         isGenerating = true
         errorMessage = nil
+        errorLog = nil
         image = nil
         prompt = ""
         elapsedText = ""
@@ -61,7 +64,13 @@ final class InviteStudioState: ObservableObject {
             prompt = result.prompt
             elapsedText = result.elapsedText
         } catch {
-            errorMessage = error.localizedDescription
+            if let inviteError = error as? InviteGenerationError {
+                errorMessage = inviteError.userMessage
+                errorLog = inviteError.diagnostic
+            } else {
+                errorMessage = error.localizedDescription
+                errorLog = "Cordial Invites generation error: \(error.localizedDescription)"
+            }
         }
 
         isGenerating = false
@@ -82,6 +91,7 @@ final class InviteStudioState: ObservableObject {
         guard recordingSessionID == nil else { return }
 
         errorMessage = nil
+        errorLog = nil
         voiceMessage = "Requesting voice access..."
         let existingText = promptText.trimmed
         let sessionID = UUID()

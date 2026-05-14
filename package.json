@@ -8,5 +8,8 @@
     "start": "cd apps/web && bun start",
     "test": "cd apps/web && bun test",
     "typecheck": "cd apps/web && bun run typecheck"
+  },
+  "dependencies": {
+    "next": "^15.5.7"
   }
 }
