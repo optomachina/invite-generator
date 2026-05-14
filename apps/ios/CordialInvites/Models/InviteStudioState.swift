@@ -14,11 +14,12 @@ final class InviteStudioState: ObservableObject {
     @Published var errorMessage: String?
     @Published var errorLog: String?
     @Published var voiceMessage: String?
+    @Published var isRecording = false
     @Published var selectedVibe = "Garden party"
     @Published var selectedEventType = "Birthday"
 
     let service: InviteGenerationService
-    let speech = SpeechTranscriptionService()
+    private var speech: SpeechTranscriptionService?
     private var recordingSessionID: UUID?
     private let defaultPromptStarter = "Tell us who it is for, what you are celebrating, when and where, and the feeling you want"
     private let starterTextMap = [
@@ -82,13 +83,10 @@ final class InviteStudioState: ObservableObject {
     }
 
     func toggleRecording() {
-        if speech.isRecording {
-            recordingSessionID = nil
-            speech.stop()
-            voiceMessage = "Voice input stopped."
+        if recordingSessionID != nil || isRecording {
+            stopRecording(message: "Voice input stopped.")
             return
         }
-        guard recordingSessionID == nil else { return }
 
         errorMessage = nil
         errorLog = nil
@@ -96,25 +94,59 @@ final class InviteStudioState: ObservableObject {
         let existingText = promptText.trimmed
         let sessionID = UUID()
         recordingSessionID = sessionID
+        isRecording = true
 
         Task {
             do {
-                try await speech.start { [weak self] transcript in
-                    guard let self else { return }
-                    guard self.speech.isRecording, self.recordingSessionID == sessionID else { return }
-                    if existingText.isEmpty {
-                        self.promptText = transcript
-                    } else {
-                        self.promptText = "\(existingText) \(transcript)"
+                guard recordingSessionID == sessionID else { return }
+                let speech = self.speechService()
+                try await speech.start(
+                    onTranscript: { [weak self] transcript in
+                        guard let self else { return }
+                        guard self.recordingSessionID == sessionID else { return }
+                        if existingText.isEmpty {
+                            self.promptText = transcript
+                        } else {
+                            self.promptText = "\(existingText) \(transcript)"
+                        }
+                    },
+                    onFinished: { [weak self] in
+                        guard let self else { return }
+                        guard self.recordingSessionID == sessionID else { return }
+                        self.stopRecording(message: nil)
                     }
+                )
+                guard recordingSessionID == sessionID else {
+                    speech.stop()
+                    return
                 }
                 voiceMessage = "Listening..."
             } catch {
-                recordingSessionID = nil
+                isRecording = false
+                if recordingSessionID == sessionID {
+                    recordingSessionID = nil
+                }
                 voiceMessage = error.localizedDescription
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    private func stopRecording(message: String?) {
+        recordingSessionID = nil
+        isRecording = false
+        speech?.stop()
+        voiceMessage = message
+    }
+
+    private func speechService() -> SpeechTranscriptionService {
+        if let speech {
+            return speech
+        }
+
+        let speech = SpeechTranscriptionService()
+        self.speech = speech
+        return speech
     }
 
     func applyEventType(_ value: String) {

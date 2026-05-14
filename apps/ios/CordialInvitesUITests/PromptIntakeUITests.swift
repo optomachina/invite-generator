@@ -55,6 +55,23 @@ final class PromptIntakeUITests: XCTestCase {
     }
 
     @MainActor
+    func testVoiceButtonCanToggleOff() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-CordialUITestFakeSpeech"]
+        app.launch()
+
+        let voiceButton = app.buttons["voiceInputButton"]
+        XCTAssertTrue(voiceButton.waitForExistence(timeout: 5))
+
+        voiceButton.tap()
+        XCTAssertTrue(app.buttons["Stop recording"].waitForExistence(timeout: 2))
+
+        app.buttons["Stop recording"].tap()
+        XCTAssertTrue(app.buttons["Start voice input"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Voice input stopped."].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
     private func hasVoiceFeedback(in app: XCUIApplication) -> Bool {
         let feedbackTimeout: TimeInterval = 2
         let voiceFeedback = app.staticTexts["Requesting voice access..."]
