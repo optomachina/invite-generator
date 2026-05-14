@@ -30,6 +30,10 @@ final class SpeechTranscriptionService: ObservableObject {
         recognizer = SFSpeechRecognizer(locale: locale)
     }
 
+    isolated deinit {
+        cleanupRecognition(shouldCancelTask: true)
+    }
+
     func start(
         onTranscript: @escaping (String) -> Void,
         onFinished: (() -> Void)? = nil
@@ -89,8 +93,8 @@ final class SpeechTranscriptionService: ObservableObject {
     private func cleanupRecognition(shouldCancelTask: Bool) {
         if audioEngine.isRunning {
             audioEngine.stop()
-            audioEngine.inputNode.removeTap(onBus: 0)
         }
+        audioEngine.inputNode.removeTap(onBus: 0)
         request?.endAudio()
         if shouldCancelTask {
             task?.cancel()

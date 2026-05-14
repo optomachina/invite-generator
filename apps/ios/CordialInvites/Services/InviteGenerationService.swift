@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import UIKit
 
 @MainActor
@@ -131,23 +132,60 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
         }
 
         let decoded = try await Task.detached(priority: .userInitiated) {
-            let decoded = try JSONDecoder().decode(GenerateResponse.self, from: data)
-            guard let first = decoded.images.first else {
-                throw InviteGenerationError.missingImage
-            }
-            guard let imageData = Data(base64Encoded: first.b64Json),
-                  let uiImage = UIImage(data: imageData) else {
-                throw InviteGenerationError.corruptImage
-            }
+            try autoreleasepool {
+                let response = try JSONDecoder().decode(GenerateResponse.self, from: data)
+                guard let first = response.images.first else {
+                    throw InviteGenerationError.missingImage
+                }
+                guard let imageData = Data(base64Encoded: first.b64Json),
+                      let uiImage = DownsampledImageDecoder.decode(imageData) else {
+                    throw InviteGenerationError.corruptImage
+                }
 
-            return (response: decoded, image: uiImage)
+                return DecodedInvite(
+                    image: uiImage,
+                    prompt: response.prompt,
+                    milliseconds: response.ms
+                )
+            }
         }.value
 
-        let seconds = Double(decoded.response.ms) / 1000
+        let seconds = Double(decoded.milliseconds) / 1000
         return InviteGenerationResult(
             image: decoded.image,
-            prompt: decoded.response.prompt,
+            prompt: decoded.prompt,
             elapsedText: "\(seconds.formatted(.number.precision(.fractionLength(1))))s"
         )
+    }
+}
+
+private struct DecodedInvite {
+    var image: UIImage
+    var prompt: String
+    var milliseconds: Int
+}
+
+private enum DownsampledImageDecoder {
+    private static let maxPixelSize = 1536
+
+    static func decode(_ data: Data) -> UIImage? {
+        let sourceOptions = [
+            kCGImageSourceShouldCache: false
+        ] as CFDictionary
+        guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else {
+            return nil
+        }
+
+        let thumbnailOptions = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+        ] as CFDictionary
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions) else {
+            return nil
+        }
+
+        return UIImage(cgImage: image)
     }
 }
