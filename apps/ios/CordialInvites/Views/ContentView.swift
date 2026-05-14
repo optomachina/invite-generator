@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @ObservedObject var state: InviteStudioState
@@ -249,13 +250,55 @@ private struct ActionPanel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if let error = state.errorMessage {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                GenerationErrorView(message: error, details: state.errorLog)
             }
         }
         .cardSurface()
+    }
+}
+
+private struct GenerationErrorView: View {
+    let message: String
+    let details: String?
+    @State private var didCopy = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let details, !details.isEmpty {
+                Button {
+                    UIPasteboard.general.string = details
+                    didCopy = true
+                } label: {
+                    Label(didCopy ? "Copied details" : "Copy details", systemImage: didCopy ? "checkmark" : "doc.on.doc")
+                        .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Brand.ink)
+                .accessibilityIdentifier("copyErrorDetailsButton")
+
+                DisclosureGroup("Error details") {
+                    ScrollView {
+                        Text(details)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(Brand.ink.opacity(0.72))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 8)
+                    }
+                    .frame(maxHeight: 180)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Brand.ink.opacity(0.7))
+            }
+        }
+        .padding(12)
+        .background(Color.red.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

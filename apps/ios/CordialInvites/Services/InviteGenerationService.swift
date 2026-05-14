@@ -10,11 +10,15 @@ enum InviteGenerationError: LocalizedError {
     case invalidBaseURL
     case invalidRequest
     case invalidResponse
-    case badStatus(Int, String)
+    case badStatus(Int, String, String)
     case missingImage
     case corruptImage
 
     var errorDescription: String? {
+        userMessage
+    }
+
+    var userMessage: String {
         switch self {
         case .invalidBaseURL:
             "The invite service URL is not configured."
@@ -22,7 +26,7 @@ enum InviteGenerationError: LocalizedError {
             "Tell us about the event before sketching."
         case .invalidResponse:
             "The invite service returned an unexpected response."
-        case let .badStatus(code, message):
+        case let .badStatus(code, message, _):
             "Generation failed (\(code)): \(message)"
         case .missingImage:
             "The invite service did not return an image."
@@ -30,6 +34,26 @@ enum InviteGenerationError: LocalizedError {
             "The generated image could not be decoded."
         }
     }
+
+    var diagnostic: String {
+        switch self {
+        case let .badStatus(code, message, body):
+            """
+            Cordial Invites generation error
+            Status: \(code)
+            Message: \(message)
+            Response: \(body)
+            """
+        default:
+            "Cordial Invites generation error: \(userMessage)"
+        }
+    }
+}
+
+private struct ErrorResponse: Decodable {
+    var error: String?
+    var detail: String?
+    var requestId: String?
 }
 
 @MainActor
@@ -73,8 +97,21 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
         }
 
         guard (200..<300).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "No response body"
-            throw InviteGenerationError.badStatus(http.statusCode, message)
+            let body = String(data: data, encoding: .utf8) ?? "No response body"
+            if let error = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                let message = [error.error, error.detail].compactMap { $0 }.joined(separator: " ")
+                let request = error.requestId.map { " Request ID: \($0)" } ?? ""
+                throw InviteGenerationError.badStatus(
+                    http.statusCode,
+                    message.isEmpty ? "The invite service failed.\(request)" : "\(message)\(request)",
+                    body
+                )
+            }
+            throw InviteGenerationError.badStatus(
+                http.statusCode,
+                "The invite service returned an internal error.",
+                body
+            )
         }
 
         let decoded = try await Task.detached(priority: .userInitiated) {
