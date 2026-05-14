@@ -49,7 +49,7 @@ private final class UITestInviteGenerationService: InviteGenerationService {
 
 @MainActor
 private final class UITestFailingInviteGenerationService: InviteGenerationService {
-    func generateInvite(prompt: String) async throws -> InviteGenerationResult {
+    func generateInvite(prompt _: String) async throws -> InviteGenerationResult {
         throw InviteGenerationError.badStatus(
             502,
             "Invite generation failed. Request ID: ui-test-request",

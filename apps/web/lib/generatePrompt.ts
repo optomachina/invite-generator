@@ -1,6 +1,6 @@
 function describesUnder21AtBar(description: string): boolean {
   const normalized = description.toLowerCase();
-  const hasUnder21Age = /\b(?:turning\s*)?(?:1[0-9]|20)(?:st|nd|rd|th)?\b/.test(normalized);
+  const hasUnder21Age = /\b(?:turning\s*)?(?:[1-9]|1\d|20)(?:st|nd|rd|th)?\b/.test(normalized);
   const hasBarVenue = /\b(?:bar|whiskey|whisky|saloon|pub|tavern|honky[- ]?tonk)\b/.test(normalized);
   return hasUnder21Age && hasBarVenue;
 }

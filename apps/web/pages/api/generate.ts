@@ -107,6 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (images.length !== settings.n) {
       logger.error("generate.partial_result", {
+        requestId: id,
         requested: settings.n,
         received: images.length,
         ms,

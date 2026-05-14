@@ -36,17 +36,33 @@ enum InviteGenerationError: LocalizedError {
     }
 
     var diagnostic: String {
-        switch self {
-        case let .badStatus(code, message, body):
-            """
+        if case let .badStatus(code, message, body) = self {
+            #if DEBUG
+            let responseSummary = String(body.prefix(1500))
+            #else
+            let responseSummary = Self.releaseResponseSummary(from: body)
+            #endif
+            return """
             Cordial Invites generation error
             Status: \(code)
             Message: \(message)
-            Response: \(body)
+            Response: \(responseSummary)
             """
-        default:
-            "Cordial Invites generation error: \(userMessage)"
         }
+
+        return "Cordial Invites generation error: \(userMessage)"
+    }
+
+    private static func releaseResponseSummary(from body: String) -> String {
+        guard
+            let data = body.data(using: .utf8),
+            let error = try? JSONDecoder().decode(ErrorResponse.self, from: data),
+            let requestId = error.requestId
+        else {
+            return "Redacted in release builds."
+        }
+
+        return "Redacted in release builds. Request ID: \(requestId)"
     }
 }
 

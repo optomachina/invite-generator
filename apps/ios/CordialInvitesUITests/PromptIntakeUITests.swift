@@ -104,6 +104,7 @@ final class PromptIntakeUITests: XCTestCase {
 
         let designButton = app.buttons["Design 1 invite"]
         XCTAssertTrue(designButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(designButton.isEnabled)
         designButton.tap()
 
         let copyDetailsButton = app.buttons["copyErrorDetailsButton"]
