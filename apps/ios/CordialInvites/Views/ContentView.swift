@@ -97,6 +97,7 @@ private struct PromptIntakeView: View {
                             .frame(width: 64, height: 64)
                             .background(state.isRecording ? Brand.clay : Brand.ink)
                             .clipShape(Circle())
+                            .contentShape(Circle())
                             .shadow(color: Brand.ink.opacity(0.12), radius: 8, y: 4)
                     }
                     .buttonStyle(.plain)
