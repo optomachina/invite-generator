@@ -1,15 +1,12 @@
 import { randomUUID } from "node:crypto";
-import type { NextApiRequest, NextApiResponse } from "next";
-import { buildPromptFromDescription } from "../../lib/generatePrompt";
-import { buildPrompt, validateIntake, validateSettings, type Intake } from "../../lib/intake";
-import { logger } from "../../lib/logger";
-import { estimateCostUsd } from "../../lib/pricing";
+import { NextResponse } from "next/server";
+import { buildPromptFromDescription } from "@/lib/generatePrompt";
+import { buildPrompt, validateIntake, validateSettings, type Intake } from "@/lib/intake";
+import { logger } from "@/lib/logger";
+import { estimateCostUsd } from "@/lib/pricing";
 
-type ErrorBody = {
-  error: string;
-  detail?: string;
-  requestId: string;
-};
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
 type OpenAIImageResponse = {
   data?: Array<{
@@ -27,46 +24,39 @@ function requestId(): string {
   return randomUUID();
 }
 
-function sendError(
-  res: NextApiResponse<ErrorBody>,
-  status: number,
-  error: string,
-  detail?: string,
-  id = requestId(),
-) {
-  res.setHeader("Cache-Control", "no-store");
-  res.status(status).json({ error, detail, requestId: id });
+function errorResponse(status: number, error: string, detail: string | undefined, id: string) {
+  return NextResponse.json(
+    { error, detail, requestId: id },
+    { status, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export function GET() {
+  return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+}
+
+export async function POST(req: Request) {
   const id = requestId();
-  res.setHeader("Cache-Control", "no-store");
-
-  if (req.method === "GET") {
-    res.status(200).json({ ok: true });
-    return;
-  }
-
-  if (req.method !== "POST") {
-    sendError(res, 405, "Method not allowed.", undefined, id);
-    return;
-  }
-
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     logger.error("generate.missing_api_key", { requestId: id });
-    sendError(res, 500, "Invite generation is not configured.", undefined, id);
-    return;
+    return errorResponse(500, "Invite generation is not configured.", undefined, id);
   }
 
-  const body = req.body as unknown;
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch (err) {
+    logger.warn("generate.invalid_json", { err, requestId: id });
+    return errorResponse(400, "Tell us about the event before sketching.", undefined, id);
+  }
+
   const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
   const rawPrompt = validateRawPrompt(b.prompt);
   const intake = validateIntake(b.intake ?? body);
   if (!rawPrompt && !intake) {
     logger.warn("generate.invalid_request", { requestId: id });
-    sendError(res, 400, "Tell us about the event before sketching.", undefined, id);
-    return;
+    return errorResponse(400, "Tell us about the event before sketching.", undefined, id);
   }
   const settings = validateSettings(b.settings);
 
@@ -113,23 +103,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ms,
         settings,
       });
-      sendError(
-        res,
+      return errorResponse(
         502,
         "The invite service did not return an image.",
         `OpenAI returned ${images.length}/${settings.n} usable images.`,
         id,
       );
-      return;
     }
 
     const costUsd = estimateCostUsd(settings);
     logger.info("generate.ok", { requestId: id, ms, costUsd, settings });
-    res.status(200).json({ images, prompt, ms, costUsd, settings });
+    return NextResponse.json(
+      { images, prompt, ms, costUsd, settings },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (err) {
     const ms = Date.now() - t0;
     const message = err instanceof Error ? err.message : String(err);
     logger.error("generate.openai_failed", { err, requestId: id, ms, settings });
-    sendError(res, 502, "Invite generation failed.", message, id);
+    return errorResponse(502, "Invite generation failed.", message, id);
   }
 }
