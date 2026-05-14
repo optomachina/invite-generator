@@ -91,21 +91,21 @@ private struct PromptIntakeView: View {
                     Button {
                         state.toggleRecording()
                     } label: {
-                        Image(systemName: state.speech.isRecording ? "stop.fill" : "mic.fill")
+                        Image(systemName: state.isRecording ? "stop.fill" : "mic.fill")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(width: 64, height: 64)
-                            .background(state.speech.isRecording ? Brand.clay : Brand.ink)
+                            .background(state.isRecording ? Brand.clay : Brand.ink)
                             .clipShape(Circle())
                             .shadow(color: Brand.ink.opacity(0.12), radius: 8, y: 4)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("voiceInputButton")
-                    .accessibilityLabel(state.speech.isRecording ? "Stop recording" : "Start voice input")
+                    .accessibilityLabel(state.isRecording ? "Stop recording" : "Start voice input")
                     .padding(14)
                 }
 
-            if state.speech.isRecording || state.voiceMessage != nil {
+            if state.isRecording || state.voiceMessage != nil {
                 RecordingIndicator(message: state.voiceMessage ?? "Listening...")
             }
 
