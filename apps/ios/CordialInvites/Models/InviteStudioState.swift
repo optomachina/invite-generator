@@ -169,7 +169,7 @@ final class InviteStudioState: ObservableObject {
                 instruction: revisionInstruction?.trimmed.isEmpty == false ? revisionInstruction!.trimmed : "Initial generation",
                 imageData: imageData,
                 prompt: result.prompt,
-                metadata: "Format: \(outputFormat.rawValue) | Style: \(selectedStyle.rawValue) | Elapsed: \(result.elapsedText)"
+                metadata: "Format: \(outputFormat.rawValue) | Style: \(selectedStyle.rawValue) | Source: \(result.source.displayName) | Elapsed: \(result.elapsedText)"
             )
 
             if var invite = currentInvite {
@@ -641,4 +641,22 @@ struct InviteGenerationResult {
     var image: UIImage
     var prompt: String
     var elapsedText: String
+    var source = InviteGenerationSource.remote
+}
+
+enum InviteGenerationSource: Equatable {
+    case remote
+    case localMock
+    case localFallback
+
+    var displayName: String {
+        switch self {
+        case .remote:
+            "Remote"
+        case .localMock:
+            "Local mock"
+        case .localFallback:
+            "Local fallback"
+        }
+    }
 }
