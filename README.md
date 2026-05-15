@@ -1,22 +1,25 @@
-# invite-generator
+# Cordial Invites
 
-Editorial-quality AI invitation generator. Enter the event details, swipe through three AI-generated invitation designs, keep the one you love.
+Cordial Invites is an iOS-first invitation creation app. Users describe an event by text or voice, review extracted details, choose a format and visual style, generate a preview, edit/regenerate in plain English, save drafts to a gallery, and continue to package-selection stubs.
 
-Built for taste-sensitive parents who'd otherwise hire a custom Etsy designer — not another Canva template.
+The web app remains in maintenance mode as the backend/fallback surface. Net-new product work should default to the native iOS app.
 
 ## Stack
 
-- **Framework:** Next.js 15 (App Router) + React 19
-- **Image model:** OpenAI `gpt-image-2` (streamed, 3 variants per session)
-- **UI:** Tailwind CSS + Framer Motion (Tinder-style swipe stack)
-- **Runtime:** Bun
-- **Hosting:** Vercel (auto-deploy on push to `main`, previews on PRs)
+- **iOS:** SwiftUI, iOS 18 target, Xcode project generated from `apps/ios/project.yml`
+- **Current iOS generation:** local mock renderer behind `InviteGenerationService`
+- **Web:** Next.js 15 (App Router) + React 19, Bun, Vercel
+- **Backend-ready image model:** OpenAI `gpt-image-2` via existing web API routes
 - **Static analysis:** SonarCloud
 
 ## Layout
 
 ```
-apps/web/             Next.js app (the product)
+apps/ios/             Native Cordial Invites app
+  CordialInvites/     SwiftUI app, models, services, views
+  CordialInvitesTests/ Unit tests
+  CordialInvitesUITests/ UI tests
+apps/web/             Next.js web app and shared backend/fallback surface
   app/                Routes, components, API
   lib/                Intake validation, prompt builder, pricing, logger
   tests/              Unit tests + Playwright evidence capture
@@ -29,7 +32,37 @@ docs/
 AGENTS.md             Evidence requirements for completed work
 ```
 
-## Local development
+## Current iOS Vertical Slice
+
+Implemented:
+- First-launch intro with replay from Account
+- Bottom tabs: Create, Gallery, Account
+- Text prompt intake, event chips, and existing voice-input path with fallback errors
+- Deterministic prompt-to-details extraction into RSVP-ready editable fields
+- Output format and style selection
+- Local mock invite preview generation with progress copy
+- Natural-language edit field, quick edit chips, regeneration, and version history
+- Local draft/gallery persistence through `UserDefaults`
+- Account defaults for preferred style, colors, RSVP contact, and output format
+- Package selection stubs with billing explicitly disabled
+
+Stubbed/mocked:
+- Image generation uses `MockInviteGenerationService`; `OpenAIInviteGenerationService` remains available for backend wiring.
+- Sign-in, hosted RSVP publishing, privacy, delete account, inspiration image upload, PDF export, and package billing are placeholders.
+- `PurchasePlaceholder` exists only as a data shape; Stripe, checkout, Apple IAP, and paid entitlements are intentionally not implemented.
+
+Core data models live in `apps/ios/CordialInvites/Models/InviteModels.swift`: `EventDetails`, `RSVPSettings`, `InviteDesign`, `InviteRevision`, `RSVPResponse`, `AccountDefaults`, and `PurchasePlaceholder`.
+
+## iOS Development
+
+```bash
+cd apps/ios
+xcodegen generate
+xcodebuild -project CordialInvites.xcodeproj -scheme CordialInvites -destination 'generic/platform=iOS Simulator' build
+xcodebuild -project CordialInvites.xcodeproj -scheme CordialInvites -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
+
+## Web Development
 
 ```bash
 cd apps/web
@@ -85,3 +118,10 @@ Push to a branch with an open PR → Vercel builds a Preview. Merge to `main` �
 - Branch naming: `feature/<slug>` or `fix/<slug>`
 - All UI-affecting changes must leave evidence under `.context/artifacts/<task-slug>/` — see [`AGENTS.md`](AGENTS.md)
 - Use OpenAI image v2 (`gpt-image-2`) only; v1 is legacy and kept behind a flag
+
+## Next Implementation Targets
+
+- Replace the mock iOS renderer with a remote generation adapter plus graceful fallback.
+- Add a hosted RSVP route/API contract and sync local `EventDetails` to backend storage.
+- Add real auth/session handling after the local creation loop is solid.
+- Keep billing out until the product flow is validated end-to-end.

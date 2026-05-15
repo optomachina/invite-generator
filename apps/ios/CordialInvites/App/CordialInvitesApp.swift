@@ -12,9 +12,13 @@ struct CordialInvitesApp: App {
         } else if ProcessInfo.processInfo.arguments.contains("-CordialUITestFailGeneration") {
             service = UITestFailingInviteGenerationService()
         } else {
-            service = OpenAIInviteGenerationService()
+            service = MockInviteGenerationService()
         }
-        _appState = StateObject(wrappedValue: InviteStudioState(service: service))
+        let state = InviteStudioState(service: service)
+        if ProcessInfo.processInfo.arguments.contains("-CordialOpenLatestInvite") {
+            state.openLatestInviteForEvidence()
+        }
+        _appState = StateObject(wrappedValue: state)
     }
 
     var body: some Scene {

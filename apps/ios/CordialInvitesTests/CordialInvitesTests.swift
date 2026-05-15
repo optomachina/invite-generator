@@ -20,6 +20,39 @@ struct CordialInvitesTests {
     }
 
     @MainActor
+    @Test func promptExtractionCreatesEditableRSVPReadyDetails() {
+        let state = InviteStudioState()
+        state.promptText = "Quinceañera for Sofia on August 12 at 5pm at Starlight Hall. Elegant rose gold, formal dress, RSVP to Maria."
+
+        state.extractDetails()
+
+        #expect(state.createStep == .details)
+        #expect(state.details.eventType == "Quinceañera")
+        #expect(state.details.honoree == "Sofia")
+        #expect(state.details.startTime == "5pm")
+        #expect(state.details.rsvp.isEnabled)
+        #expect(state.outputFormat == .fiveBySeven)
+    }
+
+    @MainActor
+    @Test func mockGenerationPreservesRevisionHistory() async throws {
+        let state = InviteStudioState()
+        state.promptText = "Graduation party for Noah on May 31 at 6pm in the backyard."
+        state.extractDetails()
+        state.continueToStyle()
+
+        await state.generate()
+        #expect(state.currentInvite?.revisions.count == 1)
+        #expect(state.createStep == .result)
+
+        state.editInstruction = "Make it more formal and use navy and gold."
+        await state.submitEdit()
+
+        #expect(state.currentInvite?.revisions.count == 2)
+        #expect(state.selectedPalette == "Navy, gold, ivory")
+    }
+
+    @MainActor
     @Test func voiceToggleOffClearsListeningIndicator() async throws {
         let transcriber = FakeSpeechTranscriber(transcript: "Backyard birthday brunch on Saturday at 10am")
         let state = InviteStudioState(speechFactory: { transcriber })

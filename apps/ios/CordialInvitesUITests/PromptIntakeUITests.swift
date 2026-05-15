@@ -8,25 +8,25 @@ final class PromptIntakeUITests: XCTestCase {
     @MainActor
     func testPromptFieldAcceptsTypingAndEnablesGeneration() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-CordialUITestFakeSpeech"]
+        app.launchArguments = ["-CordialUITestFakeSpeech", "-CordialSkipIntro"]
         app.launch()
 
         let promptField = app.textFields["invitePromptField"]
         XCTAssertTrue(promptField.waitForExistence(timeout: 5))
-        let designButton = app.buttons["Design 1 invite"]
-        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
-        XCTAssertFalse(designButton.isEnabled)
+        let reviewButton = app.buttons["Review Details"]
+        XCTAssertTrue(reviewButton.waitForExistence(timeout: 2))
+        XCTAssertFalse(reviewButton.isEnabled)
 
         promptField.tap()
         app.typeText("Backyard birthday brunch on Saturday at 10am")
 
-        XCTAssertTrue(designButton.isEnabled)
+        XCTAssertTrue(reviewButton.isEnabled)
     }
 
     @MainActor
     func testVoiceButtonGivesVisibleFeedback() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-CordialUITestFakeSpeech"]
+        app.launchArguments = ["-CordialUITestFakeSpeech", "-CordialSkipIntro"]
         app.launch()
         addUIInterruptionMonitor(withDescription: "Voice permissions") { alert in
             if alert.buttons["Allow"].exists {
@@ -49,15 +49,15 @@ final class PromptIntakeUITests: XCTestCase {
         let promptField = app.textFields["invitePromptField"]
         XCTAssertTrue(promptField.waitForExistence(timeout: 2))
         XCTAssertEqual(promptField.value as? String, "Backyard birthday brunch on Saturday at 10am")
-        let designButton = app.buttons["Design 1 invite"]
-        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
-        XCTAssertTrue(designButton.isEnabled)
+        let reviewButton = app.buttons["Review Details"]
+        XCTAssertTrue(reviewButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(reviewButton.isEnabled)
     }
 
     @MainActor
     func testVoiceButtonCanToggleOff() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-CordialUITestFakeSpeech"]
+        app.launchArguments = ["-CordialUITestFakeSpeech", "-CordialSkipIntro"]
         app.launch()
 
         let voiceButton = app.buttons["voiceInputButton"]
@@ -94,41 +94,62 @@ final class PromptIntakeUITests: XCTestCase {
     @MainActor
     func testPromptCanGenerateInviteThroughUI() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-CordialUITestFakeGeneration"]
+        app.launchArguments = ["-CordialUITestFakeGeneration", "-CordialSkipIntro"]
         app.launch()
 
-        let promptField = app.textFields["invitePromptField"]
-        XCTAssertTrue(promptField.waitForExistence(timeout: 5))
-        promptField.tap()
-        app.typeText("Xavier is turning 15 and having a party at whiskey roads on April 24th at 6pm.")
+        enterPromptAndOpenStyle(app)
 
-        let designButton = app.buttons["Design 1 invite"]
-        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
-        XCTAssertTrue(designButton.isEnabled)
-        designButton.tap()
+        let generateButton = app.buttons["Generate Preview"]
+        XCTAssertTrue(generateButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(generateButton.isEnabled)
+        tapWhenVisible(generateButton, in: app)
 
-        XCTAssertTrue(app.buttons["Share Invite"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.images["invitePreviewImage"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Use This"].waitForExistence(timeout: 2))
     }
 
     @MainActor
     func testGenerationErrorDetailsCanBeCopied() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-CordialUITestFailGeneration"]
+        app.launchArguments = ["-CordialUITestFailGeneration", "-CordialSkipIntro"]
         app.launch()
 
-        let promptField = app.textFields["invitePromptField"]
-        XCTAssertTrue(promptField.waitForExistence(timeout: 5))
-        promptField.tap()
-        app.typeText("Xavier is turning 15 and having a party at whiskey roads on April 24th at 6pm.")
+        enterPromptAndOpenStyle(app)
 
-        let designButton = app.buttons["Design 1 invite"]
-        XCTAssertTrue(designButton.waitForExistence(timeout: 2))
-        XCTAssertTrue(designButton.isEnabled)
-        designButton.tap()
+        let generateButton = app.buttons["Generate Preview"]
+        XCTAssertTrue(generateButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(generateButton.isEnabled)
+        tapWhenVisible(generateButton, in: app)
 
         let copyDetailsButton = app.buttons["copyErrorDetailsButton"]
         XCTAssertTrue(copyDetailsButton.waitForExistence(timeout: 5))
         copyDetailsButton.tap()
         XCTAssertTrue(app.buttons["Copied details"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    private func enterPromptAndOpenStyle(_ app: XCUIApplication) {
+        let promptField = app.textFields["invitePromptField"]
+        XCTAssertTrue(promptField.waitForExistence(timeout: 5))
+        promptField.tap()
+        app.typeText("Xavier is turning 15 and having a party at whiskey roads on April 24th at 6pm.")
+
+        let reviewButton = app.buttons["Review Details"]
+        XCTAssertTrue(reviewButton.waitForExistence(timeout: 2))
+        XCTAssertTrue(reviewButton.isEnabled)
+        tapWhenVisible(reviewButton, in: app)
+
+        let chooseStyleButton = app.buttons["Choose Style"]
+        XCTAssertTrue(chooseStyleButton.waitForExistence(timeout: 2))
+        tapWhenVisible(chooseStyleButton, in: app)
+    }
+
+    @MainActor
+    private func tapWhenVisible(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<8 where !element.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(element.isHittable)
+        element.tap()
     }
 }
