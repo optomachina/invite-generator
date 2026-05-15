@@ -65,10 +65,12 @@ final class PromptIntakeUITests: XCTestCase {
 
         voiceButton.tap()
         XCTAssertTrue(app.buttons["Stop recording"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Listening..."].waitForExistence(timeout: 2))
 
         app.buttons["Stop recording"].tap()
         XCTAssertTrue(app.buttons["Start voice input"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.staticTexts["Voice input stopped."].waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Listening..."].exists)
+        XCTAssertFalse(app.staticTexts["Tap mic when done"].exists)
     }
 
     @MainActor

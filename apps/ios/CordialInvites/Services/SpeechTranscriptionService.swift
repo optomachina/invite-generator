@@ -17,7 +17,16 @@ enum SpeechTranscriptionError: LocalizedError {
 }
 
 @MainActor
-final class SpeechTranscriptionService: ObservableObject {
+public protocol SpeechTranscribing: AnyObject {
+    func start(
+        onTranscript: @escaping (String) -> Void,
+        onFinished: (() -> Void)?
+    ) async throws
+    func stop()
+}
+
+@MainActor
+final class SpeechTranscriptionService: ObservableObject, SpeechTranscribing {
     @Published private(set) var isRecording = false
 
     private let recognizer: SFSpeechRecognizer?
@@ -25,6 +34,7 @@ final class SpeechTranscriptionService: ObservableObject {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private var onTranscript: ((String) -> Void)?
+    private var sessionID = UUID()
 
     init(locale: Locale = .autoupdatingCurrent) {
         recognizer = SFSpeechRecognizer(locale: locale)
@@ -53,6 +63,8 @@ final class SpeechTranscriptionService: ObservableObject {
         }
 
         stop()
+        let currentSessionID = UUID()
+        sessionID = currentSessionID
         self.onTranscript = onTranscript
 
         let audioSession = AVAudioSession.sharedInstance()
@@ -65,6 +77,14 @@ final class SpeechTranscriptionService: ObservableObject {
 
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
+        // installTap raises an uncatchable Obj-C exception (SIGABRT) when the
+        // input node has no valid format, e.g. the iOS Simulator with no
+        // usable mic input. Fail with a catchable Swift error instead so the
+        // UI can recover rather than crash.
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            cleanupRecognition(shouldCancelTask: true)
+            throw SpeechTranscriptionError.unavailable
+        }
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             request.append(buffer)
         }
@@ -75,11 +95,12 @@ final class SpeechTranscriptionService: ObservableObject {
 
         task = recognizer?.recognitionTask(with: request) { [weak self] result, error in
             Task { @MainActor in
+                guard let self, self.sessionID == currentSessionID else { return }
                 if let transcript = result?.bestTranscription.formattedString {
-                    self?.onTranscript?(transcript)
+                    self.onTranscript?(transcript)
                 }
                 if error != nil || result?.isFinal == true {
-                    self?.cleanupRecognition(shouldCancelTask: false)
+                    self.cleanupRecognition(shouldCancelTask: false)
                     onFinished?()
                 }
             }
@@ -87,6 +108,7 @@ final class SpeechTranscriptionService: ObservableObject {
     }
 
     func stop() {
+        sessionID = UUID()
         cleanupRecognition(shouldCancelTask: true)
     }
 

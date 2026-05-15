@@ -19,8 +19,9 @@ final class InviteStudioState: ObservableObject {
     @Published var selectedEventType = "Birthday"
 
     let service: InviteGenerationService
-    private var speech: SpeechTranscriptionService?
+    private var speech: SpeechTranscribing?
     private var recordingSessionID: UUID?
+    private let speechFactory: @MainActor () -> SpeechTranscribing
     private let defaultPromptStarter = "Tell us who it is for, what you are celebrating, when and where, and the feeling you want"
     private let starterTextMap = [
         "Kid's birthday": "Lily is turning 5 on May 18th at our house - pastel unicorn theme, snacks at 2pm",
@@ -40,8 +41,12 @@ final class InviteStudioState: ObservableObject {
         !promptText.trimmed.isEmpty && !isGenerating
     }
 
-    init(service: InviteGenerationService = OpenAIInviteGenerationService()) {
+    init(
+        service: InviteGenerationService = OpenAIInviteGenerationService(),
+        speechFactory: @escaping @MainActor () -> SpeechTranscribing = { SpeechTranscriptionService() }
+    ) {
         self.service = service
+        self.speechFactory = speechFactory
     }
 
     func generate() async {
@@ -84,7 +89,7 @@ final class InviteStudioState: ObservableObject {
 
     func toggleRecording() {
         if recordingSessionID != nil || isRecording {
-            stopRecording(message: "Voice input stopped.")
+            stopRecording()
             return
         }
 
@@ -113,7 +118,7 @@ final class InviteStudioState: ObservableObject {
                     onFinished: { [weak self] in
                         guard let self else { return }
                         guard self.recordingSessionID == sessionID else { return }
-                        self.stopRecording(message: nil)
+                        self.stopRecording()
                     }
                 )
                 guard recordingSessionID == sessionID else {
@@ -132,19 +137,19 @@ final class InviteStudioState: ObservableObject {
         }
     }
 
-    private func stopRecording(message: String?) {
+    private func stopRecording() {
         recordingSessionID = nil
         isRecording = false
         speech?.stop()
-        voiceMessage = message
+        voiceMessage = nil
     }
 
-    private func speechService() -> SpeechTranscriptionService {
+    private func speechService() -> SpeechTranscribing {
         if let speech {
             return speech
         }
 
-        let speech = SpeechTranscriptionService()
+        let speech = speechFactory()
         self.speech = speech
         return speech
     }
