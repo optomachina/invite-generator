@@ -25,7 +25,13 @@ xcodebuild -project CordialInvites.xcodeproj -scheme CordialInvites -destination
 
 ## Configuration
 
-The app calls the existing web backend at:
+The app currently defaults to a local mock renderer so the create flow works without backend credentials:
+
+```text
+MockInviteGenerationService
+```
+
+`OpenAIInviteGenerationService` is still present and can call the existing web backend at:
 
 ```text
 https://invite-generator-two.vercel.app/api/generate
@@ -43,6 +49,35 @@ To point the app at another backend, change `API_BASE_URL` in:
 ```text
 apps/ios/project.yml
 ```
+
+Then wire the app initializer in:
+
+```text
+apps/ios/CordialInvites/App/CordialInvitesApp.swift
+```
+
+## Product Flow
+
+Current native flow:
+
+1. First-launch intro, skippable and replayable from Account.
+2. Create tab with text prompt, voice button, and event chips.
+3. Deterministic extraction into editable event and RSVP fields.
+4. Output format and style selection.
+5. Local mock invite generation with progress states.
+6. Result screen with edit, quick edit chips, regenerate, version history, save draft, share preview, and package selection stubs.
+7. Gallery tab reopens saved previews/drafts from local storage.
+8. Account tab stores local defaults.
+
+Known placeholders:
+- Sign-in
+- Hosted RSVP publishing
+- Package billing
+- PDF export
+- Inspiration image upload
+- Privacy/delete account actions
+
+Billing note: Stripe, Apple IAP, checkout, and paid entitlements are intentionally not wired in the current iOS vertical slice.
 
 ## TestFlight
 

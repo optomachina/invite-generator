@@ -5,6 +5,13 @@ import UIKit
 @MainActor
 protocol InviteGenerationService {
     func generateInvite(prompt: String) async throws -> InviteGenerationResult
+    func generateInvite(request: InviteGenerationRequest) async throws -> InviteGenerationResult
+}
+
+extension InviteGenerationService {
+    func generateInvite(request: InviteGenerationRequest) async throws -> InviteGenerationResult {
+        try await generateInvite(prompt: request.promptForGenerator)
+    }
 }
 
 enum InviteGenerationError: LocalizedError {
@@ -157,6 +164,212 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
             elapsedText: "\(seconds.formatted(.number.precision(.fractionLength(1))))s"
         )
     }
+}
+
+@MainActor
+final class MockInviteGenerationService: InviteGenerationService {
+    func generateInvite(prompt: String) async throws -> InviteGenerationResult {
+        let details = EventDetails(eventType: "Celebration", eventTitle: "Cordial Invite", specialNotes: prompt)
+        let request = InviteGenerationRequest(
+            originalPrompt: prompt,
+            details: details,
+            outputFormat: .fiveBySeven,
+            style: .elegant,
+            colorPalette: "Blush, sage, cream",
+            advancedStyleNotes: "",
+            avoidNotes: "",
+            inspirationImageNote: "",
+            revisionInstruction: nil,
+            revisionIndex: 1
+        )
+        return try await generateInvite(request: request)
+    }
+
+    func generateInvite(request: InviteGenerationRequest) async throws -> InviteGenerationResult {
+        try await Task.sleep(for: .milliseconds(120))
+        let renderer = PlaceholderInviteRenderer(request: request)
+        let image = renderer.render()
+        return InviteGenerationResult(
+            image: image,
+            prompt: request.promptForGenerator,
+            elapsedText: "mock"
+        )
+    }
+}
+
+private struct PlaceholderInviteRenderer {
+    let request: InviteGenerationRequest
+
+    func render() -> UIImage {
+        let size = canvasSize(for: request.outputFormat)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+
+        return renderer.image { context in
+            let rect = CGRect(origin: .zero, size: size)
+            let colors = palette(for: request.style, colorText: request.colorPalette)
+            colors.background.setFill()
+            context.fill(rect)
+
+            drawBorder(in: rect, context: context.cgContext, colors: colors)
+            drawOrnaments(in: rect, context: context.cgContext, colors: colors)
+
+            let inset = size.width * 0.1
+            let textRect = rect.insetBy(dx: inset, dy: size.height * 0.12)
+            drawEyebrow("CORDIAL INVITES", in: textRect, color: colors.accent)
+            drawTitle(request.details.displayTitle, in: textRect.offsetBy(dx: 0, dy: size.height * 0.12), color: colors.ink)
+            drawBodyLines(in: textRect.offsetBy(dx: 0, dy: size.height * 0.46), colors: colors)
+            drawFooter(in: textRect.offsetBy(dx: 0, dy: size.height * 0.72), colors: colors)
+        }
+    }
+
+    private func canvasSize(for format: OutputFormat) -> CGSize {
+        switch format {
+        case .squareSocial:
+            CGSize(width: 900, height: 900)
+        case .fiveBySeven, .printablePDF:
+            CGSize(width: 750, height: 1050)
+        case .story:
+            CGSize(width: 720, height: 1280)
+        }
+    }
+
+    private func palette(for style: InviteStyle, colorText: String) -> RenderPalette {
+        let lower = colorText.lowercased()
+        if lower.contains("navy") || lower.contains("blue") {
+            return RenderPalette(
+                background: UIColor(red: 0.93, green: 0.95, blue: 0.97, alpha: 1),
+                paper: UIColor(red: 0.98, green: 0.97, blue: 0.93, alpha: 1),
+                ink: UIColor(red: 0.06, green: 0.11, blue: 0.20, alpha: 1),
+                accent: UIColor(red: 0.73, green: 0.54, blue: 0.23, alpha: 1)
+            )
+        }
+
+        switch style {
+        case .luxuryBlackGold:
+            return RenderPalette(
+                background: UIColor(red: 0.04, green: 0.04, blue: 0.04, alpha: 1),
+                paper: UIColor(red: 0.10, green: 0.09, blue: 0.08, alpha: 1),
+                ink: UIColor(red: 0.96, green: 0.88, blue: 0.67, alpha: 1),
+                accent: UIColor(red: 0.78, green: 0.59, blue: 0.25, alpha: 1)
+            )
+        case .kidsCartoon:
+            return RenderPalette(
+                background: UIColor(red: 1.00, green: 0.93, blue: 0.72, alpha: 1),
+                paper: UIColor(red: 1.00, green: 0.98, blue: 0.92, alpha: 1),
+                ink: UIColor(red: 0.15, green: 0.10, blue: 0.27, alpha: 1),
+                accent: UIColor(red: 0.89, green: 0.30, blue: 0.38, alpha: 1)
+            )
+        case .modernMinimal:
+            return RenderPalette(
+                background: UIColor(red: 0.96, green: 0.96, blue: 0.94, alpha: 1),
+                paper: UIColor.white,
+                ink: UIColor(red: 0.08, green: 0.08, blue: 0.07, alpha: 1),
+                accent: UIColor(red: 0.20, green: 0.35, blue: 0.35, alpha: 1)
+            )
+        case .western, .boho, .retro:
+            return RenderPalette(
+                background: UIColor(red: 0.93, green: 0.84, blue: 0.70, alpha: 1),
+                paper: UIColor(red: 0.98, green: 0.93, blue: 0.82, alpha: 1),
+                ink: UIColor(red: 0.18, green: 0.10, blue: 0.06, alpha: 1),
+                accent: UIColor(red: 0.63, green: 0.25, blue: 0.15, alpha: 1)
+            )
+        default:
+            return RenderPalette(
+                background: UIColor(red: 0.96, green: 0.91, blue: 0.84, alpha: 1),
+                paper: UIColor(red: 1.00, green: 0.98, blue: 0.93, alpha: 1),
+                ink: UIColor(red: 0.13, green: 0.10, blue: 0.07, alpha: 1),
+                accent: UIColor(red: 0.55, green: 0.27, blue: 0.20, alpha: 1)
+            )
+        }
+    }
+
+    private func drawBorder(in rect: CGRect, context: CGContext, colors: RenderPalette) {
+        let border = rect.insetBy(dx: rect.width * 0.055, dy: rect.width * 0.055)
+        context.setStrokeColor(colors.accent.withAlphaComponent(0.75).cgColor)
+        context.setLineWidth(6)
+        context.stroke(border)
+
+        let inner = border.insetBy(dx: 18, dy: 18)
+        context.setStrokeColor(colors.accent.withAlphaComponent(0.25).cgColor)
+        context.setLineWidth(2)
+        context.stroke(inner)
+    }
+
+    private func drawOrnaments(in rect: CGRect, context: CGContext, colors: RenderPalette) {
+        context.setFillColor(colors.accent.withAlphaComponent(0.16).cgColor)
+        for index in 0..<7 {
+            let diameter = rect.width * CGFloat(0.08 + Double(index % 3) * 0.018)
+            let x = rect.width * CGFloat(0.12 + Double(index) * 0.12)
+            let y = rect.height * (index.isMultiple(of: 2) ? 0.08 : 0.88)
+            context.fillEllipse(in: CGRect(x: x, y: y, width: diameter, height: diameter))
+        }
+    }
+
+    private func drawEyebrow(_ text: String, in rect: CGRect, color: UIColor) {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: rect.width * 0.035, weight: .semibold),
+            .foregroundColor: color,
+            .kern: 5
+        ]
+        drawCentered(text.uppercased(), in: CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: 48), attributes: attributes)
+    }
+
+    private func drawTitle(_ text: String, in rect: CGRect, color: UIColor) {
+        let fontSize = max(42, min(82, 520 / CGFloat(max(text.count, 8)) * 2.2))
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineSpacing = 4
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont(descriptor: UIFontDescriptor.preferredFontDescriptor(withTextStyle: .largeTitle).withDesign(.serif) ?? .preferredFontDescriptor(withTextStyle: .largeTitle), size: fontSize),
+            .foregroundColor: color,
+            .paragraphStyle: paragraph
+        ]
+        drawCentered(text, in: CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height * 0.26), attributes: attributes)
+    }
+
+    private func drawBodyLines(in rect: CGRect, colors: RenderPalette) {
+        let lines = [
+            request.details.dateLine,
+            request.details.locationLine,
+            request.details.hostName.trimmed.isEmpty ? "" : "Hosted by \(request.details.hostName.trimmed)",
+            request.details.dressCode.trimmed.isEmpty ? "" : request.details.dressCode.trimmed
+        ].filter { !$0.trimmed.isEmpty }
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineSpacing = 12
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: rect.width * 0.055, weight: .regular),
+            .foregroundColor: colors.ink.withAlphaComponent(0.86),
+            .paragraphStyle: paragraph
+        ]
+        drawCentered(lines.joined(separator: "\n"), in: CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height * 0.22), attributes: attributes)
+    }
+
+    private func drawFooter(in rect: CGRect, colors: RenderPalette) {
+        let footer = request.details.rsvpContact.trimmed.isEmpty
+            ? request.style.rawValue
+            : "RSVP \(request.details.rsvpContact.trimmed)"
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: rect.width * 0.038, weight: .semibold),
+            .foregroundColor: colors.accent
+        ]
+        drawCentered(footer, in: CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: 54), attributes: attributes)
+    }
+
+    private func drawCentered(_ text: String, in rect: CGRect, attributes: [NSAttributedString.Key: Any]) {
+        let attributed = NSAttributedString(string: text, attributes: attributes)
+        attributed.draw(with: rect, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+    }
+}
+
+private struct RenderPalette {
+    var background: UIColor
+    var paper: UIColor
+    var ink: UIColor
+    var accent: UIColor
 }
 
 private struct DecodedInvite {
