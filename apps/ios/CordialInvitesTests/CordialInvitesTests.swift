@@ -98,10 +98,12 @@ private final class FakeSpeechTranscriber: SpeechTranscribing {
     }
 
     func emitTranscript(_ value: String) {
+        guard !stopped else { return }
         onTranscript?(value)
     }
 
     func finish() {
+        guard !stopped else { return }
         onFinished?()
     }
 }
