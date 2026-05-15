@@ -53,6 +53,20 @@ struct CordialInvitesTests {
     }
 
     @MainActor
+    @Test func advancedStyleNotesAreIncludedInGeneratedPrompt() async throws {
+        let state = InviteStudioState()
+        state.promptText = "Garden brunch for Priya on June 2 at 11am at the conservatory."
+        state.extractDetails()
+        state.continueToStyle()
+        state.advancedStyleNotes = "Use hand-lettered typography and pressed-flower borders."
+
+        await state.generate()
+
+        #expect(state.currentInvite?.advancedStyleNotes == "Use hand-lettered typography and pressed-flower borders.")
+        #expect(state.currentInvite?.selectedRevision?.prompt.contains("Advanced style notes: Use hand-lettered typography and pressed-flower borders.") == true)
+    }
+
+    @MainActor
     @Test func voiceToggleOffClearsListeningIndicator() async throws {
         let transcriber = FakeSpeechTranscriber(transcript: "Backyard birthday brunch on Saturday at 10am")
         let state = InviteStudioState(speechFactory: { transcriber })

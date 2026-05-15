@@ -147,6 +147,7 @@ final class InviteStudioState: ObservableObject {
             outputFormat: outputFormat,
             style: selectedStyle,
             colorPalette: selectedPalette,
+            advancedStyleNotes: advancedStyleNotes,
             avoidNotes: avoidNotes,
             inspirationImageNote: inspirationImageNote,
             revisionInstruction: revisionInstruction,
@@ -177,6 +178,7 @@ final class InviteStudioState: ObservableObject {
                 invite.outputFormat = outputFormat
                 invite.style = selectedStyle
                 invite.colorPalette = selectedPalette
+                invite.advancedStyleNotes = advancedStyleNotes.trimmed.isEmpty ? nil : advancedStyleNotes
                 invite.avoidNotes = avoidNotes
                 invite.inspirationImageNote = inspirationImageNote
                 invite.status = .preview
@@ -190,6 +192,7 @@ final class InviteStudioState: ObservableObject {
                     outputFormat: outputFormat,
                     style: selectedStyle,
                     colorPalette: selectedPalette,
+                    advancedStyleNotes: advancedStyleNotes.trimmed.isEmpty ? nil : advancedStyleNotes,
                     avoidNotes: avoidNotes,
                     inspirationImageNote: inspirationImageNote,
                     status: .preview,
@@ -273,6 +276,7 @@ final class InviteStudioState: ObservableObject {
         outputFormat = invite.outputFormat
         selectedStyle = invite.style
         selectedPalette = invite.colorPalette
+        advancedStyleNotes = invite.advancedStyleNotes ?? ""
         avoidNotes = invite.avoidNotes
         inspirationImageNote = invite.inspirationImageNote
         selectedRevisionID = invite.selectedRevisionID

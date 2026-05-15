@@ -148,6 +148,7 @@ struct InviteDesign: Codable, Identifiable, Equatable {
     var outputFormat: OutputFormat
     var style: InviteStyle
     var colorPalette: String
+    var advancedStyleNotes: String?
     var avoidNotes: String
     var inspirationImageNote: String
     var status: InviteStatus
@@ -199,6 +200,7 @@ struct InviteGenerationRequest: Codable, Equatable {
     var outputFormat: OutputFormat
     var style: InviteStyle
     var colorPalette: String
+    var advancedStyleNotes: String
     var avoidNotes: String
     var inspirationImageNote: String
     var revisionInstruction: String?
@@ -212,6 +214,7 @@ struct InviteGenerationRequest: Codable, Equatable {
             details.locationLine.isEmpty ? "" : "Location: \(details.locationLine).",
             "Style: \(style.rawValue), \(style.descriptor).",
             colorPalette.trimmed.isEmpty ? "" : "Palette: \(colorPalette.trimmed).",
+            advancedStyleNotes.trimmed.isEmpty ? "" : "Advanced style notes: \(advancedStyleNotes.trimmed).",
             details.specialNotes.trimmed.isEmpty ? "" : "Notes: \(details.specialNotes.trimmed).",
             avoidNotes.trimmed.isEmpty ? "" : "Avoid: \(avoidNotes.trimmed)."
         ]

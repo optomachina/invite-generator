@@ -176,6 +176,7 @@ final class MockInviteGenerationService: InviteGenerationService {
             outputFormat: .fiveBySeven,
             style: .elegant,
             colorPalette: "Blush, sage, cream",
+            advancedStyleNotes: "",
             avoidNotes: "",
             inspirationImageNote: "",
             revisionInstruction: nil,
