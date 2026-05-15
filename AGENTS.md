@@ -44,3 +44,13 @@ Final response requirements:
 
 Preferred workflow:
 - For the web app, use `apps/web` Playwright evidence capture commands documented in `docs/evidence-capture.md`.
+
+## PR Merge Quality Gates
+
+Do not treat GitHub's mergeable state as enough to land a PR.
+
+Before recommending or performing a merge:
+- SonarCloud must have no open new issues for the PR, not just a passing quality gate.
+- CodeRabbit must have no unresolved actionable findings when it is available.
+- If CodeRabbit is rate limited or otherwise unavailable, state that explicitly in the handoff instead of claiming it is clear.
+- If either tool reports actionable issues, fix them or document why they are intentionally deferred before merge.

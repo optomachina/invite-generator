@@ -77,3 +77,11 @@ One-time setup (manual, in the SonarCloud dashboard):
 5. The next push to `main` (or any PR) will trigger an analysis; results comment on the PR as the **SonarCloud Code Analysis** check.
 
 The `sonar.exclusions` in the properties files keep `node_modules`, `.next`, `.vercel`, lockfile, and tsbuildinfo out of analysis.
+
+## PR merge policy
+
+Only merge PRs after review tools are actually clear:
+
+- SonarCloud must report zero open new issues for the PR. A passing quality gate alone is not enough.
+- CodeRabbit must have no unresolved actionable findings when it is available.
+- If CodeRabbit is rate limited or unavailable, call that out in the merge handoff.
