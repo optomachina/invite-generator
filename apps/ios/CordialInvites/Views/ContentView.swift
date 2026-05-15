@@ -724,8 +724,12 @@ private struct AccountView: View {
                             state.updateAccountDefaults()
                         }
                         SecondaryButton(title: "Replay intro", icon: "play.circle", action: replayIntro)
-                        SecondaryButton(title: "Privacy placeholder", icon: "hand.raised", action: {})
-                        SecondaryButton(title: "Delete account placeholder", icon: "trash", action: {})
+                        SecondaryButton(title: "Privacy placeholder", icon: "hand.raised") {
+                            state.showPrivacyPlaceholder()
+                        }
+                        SecondaryButton(title: "Delete account placeholder", icon: "trash") {
+                            state.showDeleteAccountPlaceholder()
+                        }
                     }
                     .font(.subheadline)
                     .foregroundStyle(Brand.ink)

@@ -330,6 +330,14 @@ final class InviteStudioState: ObservableObject {
         packageMessage = "Defaults saved locally."
     }
 
+    func showPrivacyPlaceholder() {
+        packageMessage = "Privacy settings are a placeholder until hosted RSVP accounts are wired."
+    }
+
+    func showDeleteAccountPlaceholder() {
+        packageMessage = "Delete account is a placeholder because sign-in is not wired yet."
+    }
+
     func startNewInvite() {
         promptText = ""
         selectedPromptStarterChip = nil
