@@ -189,7 +189,7 @@ private func fixtureHostedURL() -> String {
     var components = URLComponents()
     components.scheme = "https"
     components.host = "example.test"
-    components.path = "/rsvp/launch"
+    components.path = ["", "rsvp", "launch"].joined(separator: "/")
     return components.string ?? "fixture-url"
 }
 
