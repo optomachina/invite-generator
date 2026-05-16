@@ -67,6 +67,25 @@ struct CordialInvitesTests {
     }
 
     @MainActor
+    @Test func generationFallsBackToLocalRendererWhenRemoteFails() async throws {
+        let service = RemoteThenFallbackInviteGenerationService(
+            remote: FailingGenerationService(),
+            fallback: MockInviteGenerationService()
+        )
+        let state = InviteStudioState(service: service)
+        state.promptText = "Launch party for Cordial Studio on June 20 at 6pm downtown."
+        state.extractDetails()
+        state.continueToStyle()
+
+        await state.generate()
+
+        let revision = try #require(state.currentInvite?.selectedRevision)
+        #expect(state.createStep == .result)
+        #expect(revision.metadata.contains("Source: Local fallback"))
+        #expect(revision.prompt.contains("Launch party"))
+    }
+
+    @MainActor
     @Test func voiceToggleOffClearsListeningIndicator() async throws {
         let transcriber = FakeSpeechTranscriber(transcript: "Backyard birthday brunch on Saturday at 10am")
         let state = InviteStudioState(speechFactory: { transcriber })
@@ -116,6 +135,13 @@ struct CordialInvitesTests {
             }
             try await Task.sleep(for: .milliseconds(20))
         }
+    }
+}
+
+@MainActor
+private final class FailingGenerationService: InviteGenerationService {
+    func generateInvite(prompt _: String) async throws -> InviteGenerationResult {
+        throw InviteGenerationError.invalidBaseURL
     }
 }
 

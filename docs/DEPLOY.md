@@ -7,6 +7,7 @@
 - **Framework preset:** Next.js (autodetected)
 - **GitHub repo:** connected — every push to `main` triggers a Production deploy, every PR gets a Preview URL
 - **Project ID:** `prj_RnOsnbdgYqSIGxuoqEUkKcossHNd`
+- **Install/build commands:** pinned in `apps/web/vercel.json` to `npm ci --workspaces=false` and `npm run build`, so serverless functions use npm's standard `node_modules` layout at runtime.
 
 ## Environment variables
 

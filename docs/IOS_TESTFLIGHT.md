@@ -25,13 +25,15 @@ xcodebuild -project CordialInvites.xcodeproj -scheme CordialInvites -destination
 
 ## Configuration
 
-The app currently defaults to a local mock renderer so the create flow works without backend credentials:
+The app defaults to a remote-first generation service:
 
 ```text
-MockInviteGenerationService
+RemoteThenFallbackInviteGenerationService
 ```
 
-`OpenAIInviteGenerationService` is still present and can call the existing web backend at:
+It calls the existing web backend through `OpenAIInviteGenerationService` and falls back to `MockInviteGenerationService` when the backend is unavailable or not configured, so the create flow remains usable without blocking on credentials.
+
+The backend endpoint is:
 
 ```text
 https://invite-generator-two.vercel.app/api/generate
@@ -50,7 +52,7 @@ To point the app at another backend, change `API_BASE_URL` in:
 apps/ios/project.yml
 ```
 
-Then wire the app initializer in:
+The app initializer that installs the remote-first service lives in:
 
 ```text
 apps/ios/CordialInvites/App/CordialInvitesApp.swift
@@ -64,7 +66,7 @@ Current native flow:
 2. Create tab with text prompt, voice button, and event chips.
 3. Deterministic extraction into editable event and RSVP fields.
 4. Output format and style selection.
-5. Local mock invite generation with progress states.
+5. Remote invite generation with progress states and a local renderer fallback.
 6. Result screen with edit, quick edit chips, regenerate, version history, save draft, share preview, and package selection stubs.
 7. Gallery tab reopens saved previews/drafts from local storage.
 8. Account tab stores local defaults.

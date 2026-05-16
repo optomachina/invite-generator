@@ -12,7 +12,7 @@ struct CordialInvitesApp: App {
         } else if ProcessInfo.processInfo.arguments.contains("-CordialUITestFailGeneration") {
             service = UITestFailingInviteGenerationService()
         } else {
-            service = MockInviteGenerationService()
+            service = RemoteThenFallbackInviteGenerationService()
         }
         let state = InviteStudioState(service: service)
         if ProcessInfo.processInfo.arguments.contains("-CordialOpenLatestInvite") {

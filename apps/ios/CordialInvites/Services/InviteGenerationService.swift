@@ -161,8 +161,47 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
         return InviteGenerationResult(
             image: decoded.image,
             prompt: decoded.prompt,
-            elapsedText: "\(seconds.formatted(.number.precision(.fractionLength(1))))s"
+            elapsedText: "\(seconds.formatted(.number.precision(.fractionLength(1))))s",
+            source: .remote
         )
+    }
+}
+
+@MainActor
+final class RemoteThenFallbackInviteGenerationService: InviteGenerationService {
+    private let remote: InviteGenerationService
+    private let fallback: InviteGenerationService
+
+    init(
+        remote: InviteGenerationService = OpenAIInviteGenerationService(),
+        fallback: InviteGenerationService = MockInviteGenerationService()
+    ) {
+        self.remote = remote
+        self.fallback = fallback
+    }
+
+    func generateInvite(prompt: String) async throws -> InviteGenerationResult {
+        do {
+            return try await remote.generateInvite(prompt: prompt)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            var result = try await fallback.generateInvite(prompt: prompt)
+            result.source = .localFallback
+            return result
+        }
+    }
+
+    func generateInvite(request: InviteGenerationRequest) async throws -> InviteGenerationResult {
+        do {
+            return try await remote.generateInvite(request: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            var result = try await fallback.generateInvite(request: request)
+            result.source = .localFallback
+            return result
+        }
     }
 }
 
@@ -192,7 +231,8 @@ final class MockInviteGenerationService: InviteGenerationService {
         return InviteGenerationResult(
             image: image,
             prompt: request.promptForGenerator,
-            elapsedText: "mock"
+            elapsedText: "mock",
+            source: .localMock
         )
     }
 }
