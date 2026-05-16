@@ -82,11 +82,18 @@ function parsePositiveInt(value: string, fallback: number): number {
 }
 
 function slugify(value: string): string {
-  const base = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 56);
+  let base = "";
+  for (const char of value.toLowerCase()) {
+    const isAsciiLetter = char >= "a" && char <= "z";
+    const isDigit = char >= "0" && char <= "9";
+    if (isAsciiLetter || isDigit) {
+      base += char;
+    } else if (base.length > 0 && !base.endsWith("-")) {
+      base += "-";
+    }
+    if (base.length >= 56) break;
+  }
+  base = base.endsWith("-") ? base.slice(0, -1) : base;
   return base || "invite";
 }
 
