@@ -3,7 +3,7 @@ import Testing
 @testable import CordialInvites
 
 struct CordialInvitesTests {
-    private let hostedURL = "https://" + "example.test" + "/rsvp/launch"
+    private let hostedURL = fixtureHostedURL()
 
     @Test func intakeRequiresCoreEventDetails() {
         var intake = InviteIntake.demo
@@ -171,7 +171,7 @@ private final class FailingGenerationService: InviteGenerationService {
 
 @MainActor
 private final class FakeHostedRSVPService: HostedRSVPPublishing {
-    private let hostedURL = "https://" + "example.test" + "/rsvp/launch"
+    private let hostedURL = fixtureHostedURL()
     private(set) var lastDetails: EventDetails?
 
     func publishInvite(details: EventDetails, rsvpSettings _: RSVPSettings, imageData _: Data?) async throws -> HostedInvitePublishResponse {
@@ -183,6 +183,14 @@ private final class FakeHostedRSVPService: HostedRSVPPublishing {
             publicUrl: hostedURL
         )
     }
+}
+
+private func fixtureHostedURL() -> String {
+    var components = URLComponents()
+    components.scheme = "https"
+    components.host = "example.test"
+    components.path = "/rsvp/launch"
+    return components.string ?? "fixture-url"
 }
 
 @MainActor
