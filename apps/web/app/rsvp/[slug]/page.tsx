@@ -32,7 +32,7 @@ function inviteTitle(invite: NonNullable<Awaited<ReturnType<typeof getHostedInvi
 export default async function RSVPPage({ params }: Readonly<RSVPPageProps>) {
   const { slug } = await params;
   const invite = await getHostedInviteBySlug(slug);
-  if (!invite || invite.status !== "published") notFound();
+  if (invite?.status !== "published") notFound();
 
   return (
     <main className="min-h-screen bg-cream px-5 py-8 text-ink">

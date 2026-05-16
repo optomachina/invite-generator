@@ -112,7 +112,7 @@ export function validateHostedRSVPSettings(raw: unknown): HostedRSVPSettings {
     isEnabled: typeof r.isEnabled === "boolean" ? r.isEnabled : DEFAULT_RSVP_SETTINGS.isEnabled,
     allowMaybe: typeof r.allowMaybe === "boolean" ? r.allowMaybe : DEFAULT_RSVP_SETTINGS.allowMaybe,
     allowPlusOnes: typeof r.allowPlusOnes === "boolean" ? r.allowPlusOnes : DEFAULT_RSVP_SETTINGS.allowPlusOnes,
-    maxPartySize: maxPartySize ? maxPartySize : DEFAULT_RSVP_SETTINGS.maxPartySize,
+    maxPartySize: maxPartySize || DEFAULT_RSVP_SETTINGS.maxPartySize,
     askForGuestNote: typeof r.askForGuestNote === "boolean" ? r.askForGuestNote : DEFAULT_RSVP_SETTINGS.askForGuestNote,
     askForMealChoice: typeof r.askForMealChoice === "boolean" ? r.askForMealChoice : DEFAULT_RSVP_SETTINGS.askForMealChoice,
   };
@@ -137,9 +137,11 @@ export function validateRSVPInput(raw: unknown, settings: HostedRSVPSettings): R
 
   const maxPartySize = parsePositiveInt(settings.maxPartySize, 1);
   const rawGuestCount = typeof r.guestCount === "number" ? r.guestCount : Number(r.guestCount);
-  const guestCount = settings.allowPlusOnes
-    ? Math.min(Math.max(Number.isFinite(rawGuestCount) ? Math.floor(rawGuestCount) : 1, 1), maxPartySize)
-    : 1;
+  let guestCount = 1;
+  if (settings.allowPlusOnes) {
+    const requestedGuestCount = Number.isFinite(rawGuestCount) ? Math.floor(rawGuestCount) : 1;
+    guestCount = Math.min(Math.max(requestedGuestCount, 1), maxPartySize);
+  }
 
   const note = cleanText(r.note, MAX_NOTE_LEN);
   const mealChoice = cleanText(r.mealChoice);

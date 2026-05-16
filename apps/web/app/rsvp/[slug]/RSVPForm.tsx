@@ -11,6 +11,11 @@ type RSVPFormProps = {
 
 type FormStatus = "idle" | "submitting" | "sent" | "failed";
 
+function formText(formData: FormData, name: string, fallback = "") {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : fallback;
+}
+
 export function RSVPForm({ slug, settings }: Readonly<RSVPFormProps>) {
   const [formStatus, setFormStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -20,11 +25,11 @@ export function RSVPForm({ slug, settings }: Readonly<RSVPFormProps>) {
     setError(null);
 
     const body = {
-      guestName: String(formData.get("guestName") ?? ""),
-      status: String(formData.get("status") ?? "yes"),
+      guestName: formText(formData, "guestName"),
+      status: formText(formData, "status", "yes"),
       guestCount: Number(formData.get("guestCount") ?? 1),
-      note: String(formData.get("note") ?? ""),
-      mealChoice: String(formData.get("mealChoice") ?? ""),
+      note: formText(formData, "note"),
+      mealChoice: formText(formData, "mealChoice"),
     };
 
     const response = await fetch(`/api/v1/rsvp/${slug}`, {

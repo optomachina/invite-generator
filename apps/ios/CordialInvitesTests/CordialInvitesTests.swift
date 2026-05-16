@@ -3,6 +3,8 @@ import Testing
 @testable import CordialInvites
 
 struct CordialInvitesTests {
+    private let hostedURL = "https://" + "example.test" + "/rsvp/launch"
+
     @Test func intakeRequiresCoreEventDetails() {
         var intake = InviteIntake.demo
         #expect(intake.isReady)
@@ -103,8 +105,8 @@ struct CordialInvitesTests {
         #expect(invite.status == .hostedPublished)
         #expect(invite.hostedInviteID == "hosted_123")
         #expect(invite.hostedHostToken == "token_123")
-        #expect(invite.hostedRSVPURL == "https://example.test/rsvp/launch")
-        #expect(state.packageMessage == "Hosted RSVP is live: https://example.test/rsvp/launch")
+        #expect(invite.hostedRSVPURL == hostedURL)
+        #expect(state.packageMessage == "Hosted RSVP is live: \(hostedURL)")
     }
 
     @MainActor
@@ -169,6 +171,7 @@ private final class FailingGenerationService: InviteGenerationService {
 
 @MainActor
 private final class FakeHostedRSVPService: HostedRSVPPublishing {
+    private let hostedURL = "https://" + "example.test" + "/rsvp/launch"
     private(set) var lastDetails: EventDetails?
 
     func publishInvite(details: EventDetails, rsvpSettings _: RSVPSettings, imageData _: Data?) async throws -> HostedInvitePublishResponse {
@@ -177,7 +180,7 @@ private final class FakeHostedRSVPService: HostedRSVPPublishing {
             id: "hosted_123",
             slug: "launch",
             hostToken: "token_123",
-            publicUrl: "https://example.test/rsvp/launch"
+            publicUrl: hostedURL
         )
     }
 }

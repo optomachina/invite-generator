@@ -13,7 +13,7 @@ export async function GET(
 ) {
   const { slug } = await ctx.params;
   const invite = await getHostedInviteBySlug(slug);
-  if (!invite || invite.status !== "published") {
+  if (invite?.status !== "published") {
     return Response.json({ error: "not found" }, { status: 404 });
   }
 
@@ -33,7 +33,7 @@ export async function POST(
 ) {
   const { slug } = await ctx.params;
   const invite = await getHostedInviteBySlug(slug);
-  if (!invite || invite.status !== "published") {
+  if (invite?.status !== "published") {
     return Response.json({ error: "not found" }, { status: 404 });
   }
   if (!invite.rsvpSettings.isEnabled) {
