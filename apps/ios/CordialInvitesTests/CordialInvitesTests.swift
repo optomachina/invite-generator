@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import CordialInvites
 
@@ -86,6 +87,27 @@ struct CordialInvitesTests {
     }
 
     @MainActor
+    @Test func hostedRSVPPublishStoresReturnedPublicURL() async throws {
+        let hosted = FakeHostedRSVPService()
+        let state = InviteStudioState(hostedRSVPService: hosted)
+        state.promptText = "Launch party for Cordial Studio on June 20 at 6pm downtown."
+        state.extractDetails()
+        state.continueToStyle()
+        await state.generate()
+        state.useThisInvite()
+
+        await state.publishHostedRSVP()
+
+        let invite = try #require(state.currentInvite)
+        #expect(hosted.lastDetails?.eventTitle == state.details.eventTitle)
+        #expect(invite.status == .hostedPublished)
+        #expect(invite.hostedInviteID == "hosted_123")
+        #expect(invite.hostedHostToken == "token_123")
+        #expect(invite.hostedRSVPURL == "https://example.test/rsvp/launch")
+        #expect(state.packageMessage == "Hosted RSVP is live: https://example.test/rsvp/launch")
+    }
+
+    @MainActor
     @Test func voiceToggleOffClearsListeningIndicator() async throws {
         let transcriber = FakeSpeechTranscriber(transcript: "Backyard birthday brunch on Saturday at 10am")
         let state = InviteStudioState(speechFactory: { transcriber })
@@ -142,6 +164,21 @@ struct CordialInvitesTests {
 private final class FailingGenerationService: InviteGenerationService {
     func generateInvite(prompt _: String) async throws -> InviteGenerationResult {
         throw InviteGenerationError.invalidBaseURL
+    }
+}
+
+@MainActor
+private final class FakeHostedRSVPService: HostedRSVPPublishing {
+    private(set) var lastDetails: EventDetails?
+
+    func publishInvite(details: EventDetails, rsvpSettings _: RSVPSettings, imageData _: Data?) async throws -> HostedInvitePublishResponse {
+        lastDetails = details
+        return HostedInvitePublishResponse(
+            id: "hosted_123",
+            slug: "launch",
+            hostToken: "token_123",
+            publicUrl: "https://example.test/rsvp/launch"
+        )
     }
 }
 

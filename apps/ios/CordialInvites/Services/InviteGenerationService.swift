@@ -74,6 +74,11 @@ enum InviteGenerationError: LocalizedError {
     }
 }
 
+@MainActor
+protocol HostedRSVPPublishing {
+    func publishInvite(details: EventDetails, rsvpSettings: RSVPSettings, imageData: Data?) async throws -> HostedInvitePublishResponse
+}
+
 private struct ErrorResponse: Decodable {
     var error: String?
     var detail: String?
@@ -164,6 +169,69 @@ final class OpenAIInviteGenerationService: InviteGenerationService {
             elapsedText: "\(seconds.formatted(.number.precision(.fractionLength(1))))s",
             source: .remote
         )
+    }
+}
+
+@MainActor
+final class HostedRSVPService: HostedRSVPPublishing {
+    private let session: URLSession
+    private let baseURL: URL?
+    private let publishPath: String
+
+    init(session: URLSession = .shared) {
+        self.session = session
+        let configuredBaseURL = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
+        let configuredPath = Bundle.main.object(forInfoDictionaryKey: "API_HOSTED_INVITES_PATH") as? String
+        self.baseURL = configuredBaseURL.flatMap(URL.init(string:))
+        self.publishPath = configuredPath ?? ""
+    }
+
+    func publishInvite(details: EventDetails, rsvpSettings: RSVPSettings, imageData: Data?) async throws -> HostedInvitePublishResponse {
+        guard let baseURL, !publishPath.trimmed.isEmpty else {
+            throw InviteGenerationError.invalidBaseURL
+        }
+
+        let url = publishPath
+            .split(separator: "/")
+            .reduce(baseURL) { partialURL, component in
+                partialURL.appending(path: String(component))
+            }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 60
+        request.setValue("application/json", forHTTPHeaderField: "content-type")
+        request.httpBody = try JSONEncoder().encode(
+            HostedInvitePublishRequest(
+                details: details,
+                rsvpSettings: rsvpSettings,
+                imageB64: imageData?.base64EncodedString()
+            )
+        )
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw InviteGenerationError.invalidResponse
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? "No response body"
+            if let error = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                let message = [error.error, error.detail].compactMap { $0 }.joined(separator: " ")
+                throw InviteGenerationError.badStatus(
+                    http.statusCode,
+                    message.isEmpty ? "The hosted RSVP service failed." : message,
+                    body
+                )
+            }
+            throw InviteGenerationError.badStatus(
+                http.statusCode,
+                "The hosted RSVP service returned an internal error.",
+                body
+            )
+        }
+
+        return try JSONDecoder().decode(HostedInvitePublishResponse.self, from: data)
     }
 }
 

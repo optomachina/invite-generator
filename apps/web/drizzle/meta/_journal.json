@@ -15,6 +15,13 @@
       "when": 1778265693627,
       "tag": "0001_checkout_url",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778906955954,
+      "tag": "0002_neat_goliath",
+      "breakpoints": true
     }
   ]
 }

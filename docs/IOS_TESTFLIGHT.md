@@ -52,6 +52,14 @@ To point the app at another backend, change `API_BASE_URL` in:
 apps/ios/project.yml
 ```
 
+Hosted RSVP publishing uses the same base URL and posts to:
+
+```text
+api/v1/hosted-invites
+```
+
+The app stores the returned public RSVP URL, hosted invite id, and host token on the local `InviteDesign`.
+
 The app initializer that installs the remote-first service lives in:
 
 ```text
@@ -67,13 +75,13 @@ Current native flow:
 3. Deterministic extraction into editable event and RSVP fields.
 4. Output format and style selection.
 5. Remote invite generation with progress states and a local renderer fallback.
-6. Result screen with edit, quick edit chips, regenerate, version history, save draft, share preview, and package selection stubs.
-7. Gallery tab reopens saved previews/drafts from local storage.
-8. Account tab stores local defaults.
+6. Result screen with edit, quick edit chips, regenerate, version history, save draft, share preview, and package selection.
+7. Hosted RSVP package publishes the selected invite to the web backend and stores the public RSVP URL locally.
+8. Gallery tab reopens saved previews/drafts from local storage.
+9. Account tab stores local defaults.
 
 Known placeholders:
 - Sign-in
-- Hosted RSVP publishing
 - Package billing
 - PDF export
 - Inspiration image upload

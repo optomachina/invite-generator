@@ -8,6 +8,7 @@ settings:
   base:
     API_BASE_URL: https://invite-generator-two.vercel.app
     API_GENERATE_PATH: api/generate
+    API_HOSTED_INVITES_PATH: api/v1/hosted-invites
     MARKETING_VERSION: 0.1.0
     CURRENT_PROJECT_VERSION: 1
     DEVELOPMENT_TEAM: CNCDUB33GL
