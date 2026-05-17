@@ -20,7 +20,8 @@ CREATE TABLE "rsvp_responses" (
 	"guest_count" integer DEFAULT 1 NOT NULL,
 	"note" text,
 	"meal_choice" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "rsvp_responses_guest_count_positive" CHECK ("guest_count" >= 1)
 );
 --> statement-breakpoint
 ALTER TABLE "rsvp_responses" ADD CONSTRAINT "rsvp_responses_invite_id_hosted_invites_id_fk" FOREIGN KEY ("invite_id") REFERENCES "public"."hosted_invites"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

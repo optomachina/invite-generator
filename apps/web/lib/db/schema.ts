@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   integer,
   jsonb,
@@ -148,6 +149,10 @@ export const rsvpResponses = pgTable(
   (table) => ({
     inviteIdx: index("rsvp_responses_invite_idx").on(table.inviteId),
     createdIdx: index("rsvp_responses_created_idx").on(table.createdAt),
+    guestCountPositive: check(
+      "rsvp_responses_guest_count_positive",
+      sql`${table.guestCount} >= 1`,
+    ),
   }),
 );
 

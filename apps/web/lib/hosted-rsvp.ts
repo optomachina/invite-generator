@@ -76,8 +76,8 @@ function cleanText(value: unknown, max = MAX_TEXT_LEN): string | null {
 }
 
 function parsePositiveInt(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
   return parsed;
 }
 
@@ -114,12 +114,16 @@ export function validateHostedInviteDetails(raw: unknown): HostedInviteDetails |
 export function validateHostedRSVPSettings(raw: unknown): HostedRSVPSettings {
   if (!raw || typeof raw !== "object") return DEFAULT_RSVP_SETTINGS;
   const r = raw as Record<string, unknown>;
-  const maxPartySize = cleanText(r.maxPartySize);
+  const cleanedMaxPartySize = cleanText(r.maxPartySize);
+  const maxPartySize =
+    cleanedMaxPartySize === null
+      ? DEFAULT_RSVP_SETTINGS.maxPartySize
+      : String(parsePositiveInt(cleanedMaxPartySize, Number(DEFAULT_RSVP_SETTINGS.maxPartySize)));
   return {
     isEnabled: typeof r.isEnabled === "boolean" ? r.isEnabled : DEFAULT_RSVP_SETTINGS.isEnabled,
     allowMaybe: typeof r.allowMaybe === "boolean" ? r.allowMaybe : DEFAULT_RSVP_SETTINGS.allowMaybe,
     allowPlusOnes: typeof r.allowPlusOnes === "boolean" ? r.allowPlusOnes : DEFAULT_RSVP_SETTINGS.allowPlusOnes,
-    maxPartySize: maxPartySize || DEFAULT_RSVP_SETTINGS.maxPartySize,
+    maxPartySize,
     askForGuestNote: typeof r.askForGuestNote === "boolean" ? r.askForGuestNote : DEFAULT_RSVP_SETTINGS.askForGuestNote,
     askForMealChoice: typeof r.askForMealChoice === "boolean" ? r.askForMealChoice : DEFAULT_RSVP_SETTINGS.askForMealChoice,
   };
@@ -227,10 +231,14 @@ export async function createRSVPResponse(
     note: input.note,
     mealChoice: input.mealChoice,
   };
-  const [inserted] = await getDb().insert(schema.rsvpResponses).values(row).returning();
-  await getDb()
-    .update(schema.hostedInvites)
-    .set({ updatedAt: sql`now()` })
-    .where(eq(schema.hostedInvites.id, inviteId));
+  const db = getDb();
+  const [insertedRows] = await db.batch([
+    db.insert(schema.rsvpResponses).values(row).returning(),
+    db
+      .update(schema.hostedInvites)
+      .set({ updatedAt: sql`now()` })
+      .where(eq(schema.hostedInvites.id, inviteId)),
+  ]);
+  const [inserted] = insertedRows;
   return inserted;
 }

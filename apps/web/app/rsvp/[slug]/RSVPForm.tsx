@@ -32,19 +32,23 @@ export function RSVPForm({ slug, settings }: Readonly<RSVPFormProps>) {
       mealChoice: formText(formData, "mealChoice"),
     };
 
-    const response = await fetch(`/api/v1/rsvp/${slug}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await fetch(`/api/v1/rsvp/${slug}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (!response.ok) {
-      setFormStatus("failed");
-      setError("We could not save that RSVP. Please check the details and try again.");
-      return;
+      if (response.ok) {
+        setFormStatus("sent");
+        return;
+      }
+    } catch {
+      // Show the same retryable failure state for offline or interrupted submissions.
     }
 
-    setFormStatus("sent");
+    setFormStatus("failed");
+    setError("We could not save that RSVP. Please check the details and try again.");
   }
 
   if (!settings.isEnabled) {

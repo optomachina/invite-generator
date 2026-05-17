@@ -41,6 +41,7 @@ final class InviteStudioState: ObservableObject {
     private let hostedRSVPService: HostedRSVPPublishing
     private var speech: SpeechTranscribing?
     private var recordingSessionID: UUID?
+    private var hostedHostTokensByInviteID: [UUID: String] = [:]
     private let speechFactory: @MainActor () -> SpeechTranscribing
     private let store = InviteLocalStore()
 
@@ -83,9 +84,9 @@ final class InviteStudioState: ObservableObject {
 
     var packages: [PurchasePlaceholder] {
         [
-            PurchasePlaceholder(packageName: "Image Export", priceLabel: "$4.99 placeholder"),
-            PurchasePlaceholder(packageName: "Hosted RSVP Invite", priceLabel: "$14.99 placeholder"),
-            PurchasePlaceholder(packageName: "Premium Event Kit", priceLabel: "$24.99 placeholder")
+            PurchasePlaceholder(kind: .imageExport, packageName: "Image Export", priceLabel: "$4.99 placeholder"),
+            PurchasePlaceholder(kind: .hostedRSVP, packageName: "Hosted RSVP Invite", priceLabel: "$14.99 placeholder"),
+            PurchasePlaceholder(kind: .premiumEventKit, packageName: "Premium Event Kit", priceLabel: "$24.99 placeholder")
         ]
     }
 
@@ -274,6 +275,10 @@ final class InviteStudioState: ObservableObject {
         packageMessage = "\(package.packageName) is a stub. Billing is intentionally not wired in this pass."
     }
 
+    func hostedHostToken(for inviteID: UUID) -> String? {
+        hostedHostTokensByInviteID[inviteID]
+    }
+
     func publishHostedRSVP() async {
         guard !isPublishingHostedInvite else { return }
         guard var invite = currentInvite else {
@@ -300,8 +305,8 @@ final class InviteStudioState: ObservableObject {
             invite.details = details
             invite.status = .hostedPublished
             invite.hostedInviteID = response.id
-            invite.hostedHostToken = response.hostToken
             invite.hostedRSVPURL = response.publicUrl
+            hostedHostTokensByInviteID[invite.id] = response.hostToken
             currentInvite = invite
             upsertCurrentInvite()
             packageMessage = "Hosted RSVP is live: \(response.publicUrl)"

@@ -7,12 +7,21 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function hostTokenFrom(req: Request): string | null {
+  const header = req.headers.get("authorization");
+  if (header?.startsWith("Bearer ")) {
+    const token = header.slice("Bearer ".length).trim();
+    if (token) return token;
+  }
+  return new URL(req.url).searchParams.get("token");
+}
+
 export async function GET(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const token = new URL(req.url).searchParams.get("token");
+  const token = hostTokenFrom(req);
   if (!id || !token) {
     return Response.json({ error: "missing id or token" }, { status: 400 });
   }

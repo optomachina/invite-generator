@@ -104,8 +104,8 @@ struct CordialInvitesTests {
         #expect(hosted.lastDetails?.eventTitle == state.details.eventTitle)
         #expect(invite.status == .hostedPublished)
         #expect(invite.hostedInviteID == "hosted_123")
-        #expect(invite.hostedHostToken == "token_123")
         #expect(invite.hostedRSVPURL == hostedURL)
+        #expect(state.hostedHostToken(for: invite.id) == "token_123")
         #expect(state.packageMessage == "Hosted RSVP is live: \(hostedURL)")
     }
 

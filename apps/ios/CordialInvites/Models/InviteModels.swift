@@ -156,7 +156,6 @@ struct InviteDesign: Codable, Identifiable, Equatable {
     var revisions: [InviteRevision]
     var selectedRevisionID: UUID?
     var hostedInviteID: String? = nil
-    var hostedHostToken: String? = nil
     var hostedRSVPURL: String? = nil
 
     var selectedRevision: InviteRevision? {
@@ -191,11 +190,22 @@ struct RSVPResponse: Codable, Identifiable, Equatable {
     var respondedAt: Date?
 }
 
+enum PurchasePackageKind: String, Codable {
+    case imageExport
+    case hostedRSVP
+    case premiumEventKit
+}
+
 struct PurchasePlaceholder: Codable, Identifiable, Equatable {
     var id = UUID()
+    var kind: PurchasePackageKind
     var packageName: String
     var priceLabel: String
     var isBillingWired = false
+
+    var isHostedRSVP: Bool {
+        kind == .hostedRSVP
+    }
 }
 
 struct InviteGenerationRequest: Codable, Equatable {

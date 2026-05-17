@@ -231,7 +231,11 @@ final class HostedRSVPService: HostedRSVPPublishing {
             )
         }
 
-        return try JSONDecoder().decode(HostedInvitePublishResponse.self, from: data)
+        do {
+            return try JSONDecoder().decode(HostedInvitePublishResponse.self, from: data)
+        } catch {
+            throw InviteGenerationError.invalidResponse
+        }
     }
 }
 

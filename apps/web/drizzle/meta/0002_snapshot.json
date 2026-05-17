@@ -407,7 +407,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "rsvp_responses_guest_count_positive": {
+          "name": "rsvp_responses_guest_count_positive",
+          "value": "\"rsvp_responses\".\"guest_count\" >= 1"
+        }
+      },
       "isRLSEnabled": false
     }
   },

@@ -580,7 +580,7 @@ private struct PackageStepView: View {
 
             ForEach(state.packages) { package in
                 Button {
-                    if package.packageName.contains("Hosted") {
+                    if package.isHostedRSVP {
                         Task { await state.publishHostedRSVP() }
                     } else {
                         state.choosePackage(package)
@@ -591,7 +591,7 @@ private struct PackageStepView: View {
                             HStack(spacing: 8) {
                                 Text(package.packageName)
                                     .font(.headline)
-                                if package.packageName.contains("Hosted") {
+                                if package.isHostedRSVP {
                                     Text("Recommended")
                                         .font(.caption.weight(.bold))
                                         .padding(.horizontal, 8)
@@ -605,10 +605,10 @@ private struct PackageStepView: View {
                                 .foregroundStyle(Brand.ink.opacity(0.62))
                         }
                         Spacer()
-                        if state.isPublishingHostedInvite && package.packageName.contains("Hosted") {
+                        if state.isPublishingHostedInvite && package.isHostedRSVP {
                             ProgressView()
                         } else {
-                            Image(systemName: package.packageName.contains("Hosted") ? "link" : "lock")
+                            Image(systemName: package.isHostedRSVP ? "link" : "lock")
                                 .foregroundStyle(Brand.clay)
                         }
                     }

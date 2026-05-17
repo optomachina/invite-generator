@@ -30,6 +30,13 @@ describe("hosted rsvp validation", () => {
     expect(settings.isEnabled).toBe(true);
   });
 
+  test("normalizes RSVP max party size to a positive integer", () => {
+    expect(validateHostedRSVPSettings({ maxPartySize: "12" }).maxPartySize).toBe("12");
+    expect(validateHostedRSVPSettings({ maxPartySize: "12 guests" }).maxPartySize).toBe("2");
+    expect(validateHostedRSVPSettings({ maxPartySize: "zero" }).maxPartySize).toBe("2");
+    expect(validateHostedRSVPSettings({ maxPartySize: "-4" }).maxPartySize).toBe("2");
+  });
+
   test("clamps RSVP party size and rejects disabled maybe responses", () => {
     const settings = validateHostedRSVPSettings({
       allowMaybe: false,
