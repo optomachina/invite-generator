@@ -14,8 +14,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "host_token": {
-          "name": "host_token",
+        "host_token_hash": {
+          "name": "host_token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -83,11 +83,11 @@
           "method": "btree",
           "with": {}
         },
-        "hosted_invites_host_token_idx": {
-          "name": "hosted_invites_host_token_idx",
+        "hosted_invites_host_token_hash_idx": {
+          "name": "hosted_invites_host_token_hash_idx",
           "columns": [
             {
-              "expression": "host_token",
+              "expression": "host_token_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

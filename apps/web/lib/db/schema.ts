@@ -109,7 +109,7 @@ export const hostedInvites = pgTable(
   "hosted_invites",
   {
     id: text("id").primaryKey(),
-    hostToken: text("host_token").notNull(),
+    hostTokenHash: text("host_token_hash").notNull(),
     slug: text("slug").notNull(),
     status: hostedInviteStatus("status").notNull().default("published"),
     details: jsonb("details").$type<HostedInviteDetails>().notNull(),
@@ -125,7 +125,7 @@ export const hostedInvites = pgTable(
   },
   (table) => ({
     slugIdx: uniqueIndex("hosted_invites_slug_idx").on(table.slug),
-    hostTokenIdx: uniqueIndex("hosted_invites_host_token_idx").on(table.hostToken),
+    hostTokenHashIdx: uniqueIndex("hosted_invites_host_token_hash_idx").on(table.hostTokenHash),
     statusIdx: index("hosted_invites_status_idx").on(table.status),
   }),
 );

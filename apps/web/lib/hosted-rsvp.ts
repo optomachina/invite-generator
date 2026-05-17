@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { and, desc, eq, sql } from "drizzle-orm";
 
@@ -59,12 +59,20 @@ export type RSVPInput = {
   mealChoice: string;
 };
 
+export type CreatedHostedInvite = HostedInvite & {
+  hostToken: string;
+};
+
 export function publicUrlFor(slug: string): string {
   return `${appOrigin()}/rsvp/${slug}`;
 }
 
 function newToken(): string {
   return randomBytes(32).toString("base64url");
+}
+
+function hashHostToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 function cleanText(value: unknown, max = MAX_TEXT_LEN): string | null {
@@ -167,13 +175,14 @@ export function validateRSVPInput(raw: unknown, settings: HostedRSVPSettings): R
   };
 }
 
-export async function createHostedInvite(input: CreateHostedInviteInput): Promise<HostedInvite> {
+export async function createHostedInvite(input: CreateHostedInviteInput): Promise<CreatedHostedInvite> {
   const id = randomUUID();
   const title = input.details.eventTitle || input.details.honoree || input.details.eventType;
   const slug = `${slugify(title)}-${id.slice(0, 8)}`;
+  const hostToken = newToken();
   const row: NewHostedInvite = {
     id,
-    hostToken: newToken(),
+    hostTokenHash: hashHostToken(hostToken),
     slug,
     status: "published",
     details: input.details,
@@ -181,7 +190,7 @@ export async function createHostedInvite(input: CreateHostedInviteInput): Promis
     imageB64: input.imageB64,
   };
   const [inserted] = await getDb().insert(schema.hostedInvites).values(row).returning();
-  return inserted;
+  return { ...inserted, hostToken };
 }
 
 export async function getHostedInviteBySlug(slug: string): Promise<HostedInvite | null> {
@@ -203,7 +212,7 @@ export async function getHostedInviteByIdAndToken(
     .where(
       and(
         eq(schema.hostedInvites.id, id),
-        eq(schema.hostedInvites.hostToken, token),
+        eq(schema.hostedInvites.hostTokenHash, hashHostToken(token)),
       ),
     )
     .limit(1);
