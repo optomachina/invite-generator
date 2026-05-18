@@ -35,10 +35,13 @@ final class InviteStudioState: ObservableObject {
     @Published var errorLog: String?
     @Published var editInstruction = ""
     @Published var packageMessage: String?
+    @Published var isPublishingHostedInvite = false
 
     let service: InviteGenerationService
+    private let hostedRSVPService: HostedRSVPPublishing
     private var speech: SpeechTranscribing?
     private var recordingSessionID: UUID?
+    private var hostedHostTokensByInviteID: [UUID: String] = [:]
     private let speechFactory: @MainActor () -> SpeechTranscribing
     private let store = InviteLocalStore()
 
@@ -81,17 +84,19 @@ final class InviteStudioState: ObservableObject {
 
     var packages: [PurchasePlaceholder] {
         [
-            PurchasePlaceholder(packageName: "Image Export", priceLabel: "$4.99 placeholder"),
-            PurchasePlaceholder(packageName: "Hosted RSVP Invite", priceLabel: "$14.99 placeholder"),
-            PurchasePlaceholder(packageName: "Premium Event Kit", priceLabel: "$24.99 placeholder")
+            PurchasePlaceholder(kind: .imageExport, packageName: "Image Export", priceLabel: "$4.99 placeholder"),
+            PurchasePlaceholder(kind: .hostedRSVP, packageName: "Hosted RSVP Invite", priceLabel: "$14.99 placeholder"),
+            PurchasePlaceholder(kind: .premiumEventKit, packageName: "Premium Event Kit", priceLabel: "$24.99 placeholder")
         ]
     }
 
     init(
         service: InviteGenerationService = MockInviteGenerationService(),
+        hostedRSVPService: HostedRSVPPublishing = HostedRSVPService(),
         speechFactory: @escaping @MainActor () -> SpeechTranscribing = { SpeechTranscriptionService() }
     ) {
         self.service = service
+        self.hostedRSVPService = hostedRSVPService
         self.speechFactory = speechFactory
         loadPersistedState()
     }
@@ -268,6 +273,55 @@ final class InviteStudioState: ObservableObject {
 
     func choosePackage(_ package: PurchasePlaceholder) {
         packageMessage = "\(package.packageName) is a stub. Billing is intentionally not wired in this pass."
+    }
+
+    func hostedHostToken(for inviteID: UUID) -> String? {
+        hostedHostTokensByInviteID[inviteID]
+    }
+
+    func publishHostedRSVP() async {
+        guard !isPublishingHostedInvite else { return }
+        guard var invite = currentInvite else {
+            packageMessage = "Choose an invite preview before publishing hosted RSVP."
+            return
+        }
+        guard details.rsvp.isEnabled else {
+            packageMessage = "Turn on RSVP collection before publishing hosted RSVP."
+            return
+        }
+
+        isPublishingHostedInvite = true
+        packageMessage = "Publishing hosted RSVP..."
+        errorMessage = nil
+        errorLog = nil
+
+        do {
+            let response = try await hostedRSVPService.publishInvite(
+                details: details,
+                rsvpSettings: details.rsvp,
+                imageData: selectedRevision?.imageData
+            )
+            invite.updatedAt = Date()
+            invite.details = details
+            invite.status = .hostedPublished
+            invite.hostedInviteID = response.id
+            invite.hostedRSVPURL = response.publicUrl
+            hostedHostTokensByInviteID[invite.id] = response.hostToken
+            currentInvite = invite
+            upsertCurrentInvite()
+            packageMessage = "Hosted RSVP is live: \(response.publicUrl)"
+        } catch {
+            if let inviteError = error as? InviteGenerationError {
+                errorMessage = inviteError.userMessage
+                errorLog = inviteError.diagnostic
+            } else {
+                errorMessage = error.localizedDescription
+                errorLog = "Cordial Invites hosted RSVP error: \(error.localizedDescription)"
+            }
+            packageMessage = nil
+        }
+
+        isPublishingHostedInvite = false
     }
 
     func openGalleryInvite(_ invite: InviteDesign) {

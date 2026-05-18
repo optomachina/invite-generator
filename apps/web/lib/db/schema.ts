@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -14,6 +16,17 @@ export const orderStatus = pgEnum("order_status", [
   "paid",
   "fulfilled",
   "failed",
+]);
+
+export const hostedInviteStatus = pgEnum("hosted_invite_status", [
+  "published",
+  "closed",
+]);
+
+export const rsvpStatus = pgEnum("rsvp_status", [
+  "yes",
+  "no",
+  "maybe",
 ]);
 
 export const orders = pgTable(
@@ -63,3 +76,87 @@ export type OrderFields = {
 
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
+
+export type HostedInviteDetails = {
+  eventType: string;
+  eventTitle: string;
+  honoree: string;
+  hostName: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  venueName: string;
+  address: string;
+  rsvpContact: string;
+  rsvpDeadline: string;
+  dressCode: string;
+  registryLink: string;
+  specialNotes: string;
+  plusOneRules: string;
+  maxGuests: string;
+};
+
+export type HostedRSVPSettings = {
+  isEnabled: boolean;
+  allowMaybe: boolean;
+  allowPlusOnes: boolean;
+  maxPartySize: string;
+  askForGuestNote: boolean;
+  askForMealChoice: boolean;
+};
+
+export const hostedInvites = pgTable(
+  "hosted_invites",
+  {
+    id: text("id").primaryKey(),
+    hostTokenHash: text("host_token_hash").notNull(),
+    slug: text("slug").notNull(),
+    status: hostedInviteStatus("status").notNull().default("published"),
+    details: jsonb("details").$type<HostedInviteDetails>().notNull(),
+    rsvpSettings: jsonb("rsvp_settings").$type<HostedRSVPSettings>().notNull(),
+    imageB64: text("image_b64"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`)
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    slugIdx: uniqueIndex("hosted_invites_slug_idx").on(table.slug),
+    hostTokenHashIdx: uniqueIndex("hosted_invites_host_token_hash_idx").on(table.hostTokenHash),
+    statusIdx: index("hosted_invites_status_idx").on(table.status),
+  }),
+);
+
+export const rsvpResponses = pgTable(
+  "rsvp_responses",
+  {
+    id: text("id").primaryKey(),
+    inviteId: text("invite_id")
+      .notNull()
+      .references(() => hostedInvites.id, { onDelete: "cascade" }),
+    guestName: text("guest_name").notNull(),
+    status: rsvpStatus("status").notNull(),
+    guestCount: integer("guest_count").notNull().default(1),
+    note: text("note"),
+    mealChoice: text("meal_choice"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (table) => ({
+    inviteIdx: index("rsvp_responses_invite_idx").on(table.inviteId),
+    createdIdx: index("rsvp_responses_created_idx").on(table.createdAt),
+    guestCountPositive: check(
+      "rsvp_responses_guest_count_positive",
+      sql`${table.guestCount} >= 1`,
+    ),
+  }),
+);
+
+export type HostedInvite = typeof hostedInvites.$inferSelect;
+export type NewHostedInvite = typeof hostedInvites.$inferInsert;
+export type RSVPResponseRow = typeof rsvpResponses.$inferSelect;
+export type NewRSVPResponse = typeof rsvpResponses.$inferInsert;

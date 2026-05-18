@@ -576,18 +576,22 @@ private struct PackageStepView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Choose Package", subtitle: "Billing is intentionally stubbed for this pass.")
+            SectionHeader(title: "Choose Package", subtitle: "Hosted RSVP can publish now; paid packages remain stubbed.")
 
             ForEach(state.packages) { package in
                 Button {
-                    state.choosePackage(package)
+                    if package.isHostedRSVP {
+                        Task { await state.publishHostedRSVP() }
+                    } else {
+                        state.choosePackage(package)
+                    }
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
                                 Text(package.packageName)
                                     .font(.headline)
-                                if package.packageName.contains("Hosted") {
+                                if package.isHostedRSVP {
                                     Text("Recommended")
                                         .font(.caption.weight(.bold))
                                         .padding(.horizontal, 8)
@@ -601,14 +605,19 @@ private struct PackageStepView: View {
                                 .foregroundStyle(Brand.ink.opacity(0.62))
                         }
                         Spacer()
-                        Image(systemName: "lock")
-                            .foregroundStyle(Brand.clay)
+                        if state.isPublishingHostedInvite && package.isHostedRSVP {
+                            ProgressView()
+                        } else {
+                            Image(systemName: package.isHostedRSVP ? "link" : "lock")
+                                .foregroundStyle(Brand.clay)
+                        }
                     }
                     .padding(14)
                     .background(Brand.paper)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .disabled(state.isPublishingHostedInvite)
             }
 
             InfoMessage(text: state.packageMessage)

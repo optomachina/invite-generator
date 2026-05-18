@@ -126,6 +126,7 @@ enum InviteStyle: String, CaseIterable, Codable, Identifiable {
 enum InviteStatus: String, Codable {
     case draft = "Draft"
     case preview = "Preview"
+    case hostedPublished = "Hosted RSVP live"
     case publishedPlaceholder = "Published placeholder"
     case exportedPlaceholder = "Exported placeholder"
 }
@@ -154,6 +155,8 @@ struct InviteDesign: Codable, Identifiable, Equatable {
     var status: InviteStatus
     var revisions: [InviteRevision]
     var selectedRevisionID: UUID?
+    var hostedInviteID: String? = nil
+    var hostedRSVPURL: String? = nil
 
     var selectedRevision: InviteRevision? {
         if let selectedRevisionID,
@@ -187,11 +190,22 @@ struct RSVPResponse: Codable, Identifiable, Equatable {
     var respondedAt: Date?
 }
 
+enum PurchasePackageKind: String, Codable {
+    case imageExport
+    case hostedRSVP
+    case premiumEventKit
+}
+
 struct PurchasePlaceholder: Codable, Identifiable, Equatable {
     var id = UUID()
+    var kind: PurchasePackageKind
     var packageName: String
     var priceLabel: String
     var isBillingWired = false
+
+    var isHostedRSVP: Bool {
+        kind == .hostedRSVP
+    }
 }
 
 struct InviteGenerationRequest: Codable, Equatable {
@@ -257,6 +271,19 @@ struct GenerateResponse: Decodable {
     var ms: Int
     var costUsd: Double
     var settings: GenerationSettings
+}
+
+struct HostedInvitePublishRequest: Codable {
+    var details: EventDetails
+    var rsvpSettings: RSVPSettings
+    var imageB64: String?
+}
+
+struct HostedInvitePublishResponse: Decodable, Equatable {
+    var id: String
+    var slug: String
+    var hostToken: String
+    var publicUrl: String
 }
 
 struct GeneratedImage: Decodable {

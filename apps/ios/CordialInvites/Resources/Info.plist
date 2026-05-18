@@ -39,5 +39,7 @@
 	<string>$(API_BASE_URL)</string>
 	<key>API_GENERATE_PATH</key>
 	<string>$(API_GENERATE_PATH)</string>
+	<key>API_HOSTED_INVITES_PATH</key>
+	<string>$(API_HOSTED_INVITES_PATH)</string>
 </dict>
 </plist>

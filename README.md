@@ -1,13 +1,13 @@
 # Cordial Invites
 
-Cordial Invites is an iOS-first invitation creation app. Users describe an event by text or voice, review extracted details, choose a format and visual style, generate a preview, edit/regenerate in plain English, save drafts to a gallery, and continue to package-selection stubs.
+Cordial Invites is an iOS-first invitation creation app. Users describe an event by text or voice, review extracted details, choose a format and visual style, generate a preview, edit/regenerate in plain English, save drafts to a gallery, and publish a hosted RSVP link.
 
 The web app remains in maintenance mode as the backend/fallback surface. Net-new product work should default to the native iOS app.
 
 ## Stack
 
 - **iOS:** SwiftUI, iOS 18 target, Xcode project generated from `apps/ios/project.yml`
-- **Current iOS generation:** local mock renderer behind `InviteGenerationService`
+- **Current iOS generation:** remote-first web API adapter with local renderer fallback
 - **Web:** Next.js 15 (App Router) + React 19, Bun, Vercel
 - **Backend-ready image model:** OpenAI `gpt-image-2` via existing web API routes
 - **Static analysis:** SonarCloud
@@ -44,11 +44,12 @@ Implemented:
 - Natural-language edit field, quick edit chips, regeneration, and version history
 - Local draft/gallery persistence through `UserDefaults`
 - Account defaults for preferred style, colors, RSVP contact, and output format
-- Package selection stubs with billing explicitly disabled
+- Hosted RSVP publishing from the package screen, backed by the web API and public RSVP page
+- Package selection stubs for non-hosted paid packages, with billing explicitly disabled
 
 Stubbed/mocked:
-- Image generation uses `MockInviteGenerationService`; `OpenAIInviteGenerationService` remains available for backend wiring.
-- Sign-in, hosted RSVP publishing, privacy, delete account, inspiration image upload, PDF export, and package billing are placeholders.
+- Image generation calls the web backend first and falls back to `MockInviteGenerationService` when remote generation is unavailable.
+- Sign-in, privacy, delete account, inspiration image upload, PDF export, and package billing are placeholders.
 - `PurchasePlaceholder` exists only as a data shape; Stripe, checkout, Apple IAP, and paid entitlements are intentionally not implemented.
 
 Core data models live in `apps/ios/CordialInvites/Models/InviteModels.swift`: `EventDetails`, `RSVPSettings`, `InviteDesign`, `InviteRevision`, `RSVPResponse`, `AccountDefaults`, and `PurchasePlaceholder`.
@@ -78,7 +79,7 @@ stripe listen --forward-to localhost:3001/api/v1/webhooks/stripe
 # copy the whsec_… into .env.local as STRIPE_WEBHOOK_SECRET, then restart dev
 ```
 
-### One-time setup (before first payment)
+### One-time setup (before hosted RSVP or first payment)
 
 1. **Neon Postgres** — create a project at neon.tech, paste the pooled connection string into `DATABASE_URL`, then:
    ```bash
@@ -93,6 +94,10 @@ stripe listen --forward-to localhost:3001/api/v1/webhooks/stripe
    ```
 3. **Resend** — sign up, generate an API key, paste into `RESEND_API_KEY`. Use `onboarding@resend.dev` as `RESEND_FROM` until your sending domain is verified.
 4. **APP_URL** — set this to whatever the browser sees as your origin. Local: `http://localhost:3001`. Vercel previews: the assigned `https://<branch>-<proj>.vercel.app`. Production: your purchased domain. Magic-link emails (sent from the Stripe webhook) construct absolute URLs from this.
+
+### Hosted RSVP
+
+The iOS hosted package posts selected invite details and the selected preview image to `/api/v1/hosted-invites`. The response includes a public `/rsvp/[slug]` URL and a host token. Guests can view the invite and submit RSVP responses without an account; the host token reads the private response list through `/api/v1/hosted-invites/[id]?token=...`.
 
 ### Post-purchase access
 
@@ -121,7 +126,5 @@ Push to a branch with an open PR → Vercel builds a Preview. Merge to `main` �
 
 ## Next Implementation Targets
 
-- Replace the mock iOS renderer with a remote generation adapter plus graceful fallback.
-- Add a hosted RSVP route/API contract and sync local `EventDetails` to backend storage.
 - Add real auth/session handling after the local creation loop is solid.
 - Keep billing out until the product flow is validated end-to-end.
